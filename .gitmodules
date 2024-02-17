@@ -1,0 +1,6 @@
+[submodule "hal"]
+	path = hal
+	url = git@github.com:Sana8200/uC32_HAL.git
+[submodule "service"]
+	path = service
+	url = git@github.com:Sana8200/uC32_Service.git
