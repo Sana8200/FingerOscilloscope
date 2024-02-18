@@ -4,3 +4,9 @@
 [submodule "service"]
 	path = service
 	url = git@github.com:Sana8200/uC32_Service.git
+[submodule "services/basic_iosheild"]
+	path = services/basic_iosheild
+	url = git@github.com:Sana8200/x32_Basic_IOShield_Service.git
+[submodule "services/u32_mainboard"]
+	path = services/u32_mainboard
+	url = git@github.com:Sana8200/uC32_Service.git
