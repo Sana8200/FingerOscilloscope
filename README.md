@@ -1,5 +1,4 @@
 # FingerOsilloscope
-# DTEK-V Digital Oscilloscope 
 
 A real-time digital oscilloscope built on the DTEK-V board. This project captures, displays, and analyzes analog voltage signals as an advanced embedded systems exercise.
 
