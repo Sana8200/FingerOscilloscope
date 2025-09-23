@@ -22,7 +22,7 @@ The oscilloscope's accuracy is verified using a function generator to confirm th
 
 The main technical challenge is managing real-time tasks: generating a stable VGA signal while continuously sampling the ADC and responding to user input without flicker or data loss.
 
-## 👥 Contributors
+## Contributors
 
 * Sana Monhaseri
 * Rachel Lachiani
