@@ -29,4 +29,5 @@ The main technical challenge is managing real-time tasks: generating a stable VG
 
 ## 📜 License
 
-This project is licensed under the MIT License.
+
+Copyright © 2025 Sana Monhaseri and Rachel Lachiani. All Rights Reserved.
