@@ -27,7 +27,5 @@ The main technical challenge is managing real-time tasks: generating a stable VG
 * Sana Monhaseri
 * Rachel Lachiani
 
-## 📜 License
-
-
+### License
 Copyright © 2025 Sana Monhaseri and Rachel Lachiani. All Rights Reserved.
