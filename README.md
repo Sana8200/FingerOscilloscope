@@ -10,7 +10,7 @@ A real-time digital oscilloscope built on the DTEK-V board. This project capture
 * **Zoom & Pan:** Adjust time/voltage scales and shift the wave using onboard buttons and knobs.
 * **Dual-Mode Operation:** Switch seamlessly between live capture and replaying saved signals.
 
-## 🛠️ How It Works
+## How It Works
 
 The system is built in C for direct hardware control. It uses the board's **ADC** to continuously sample input voltage into a **circular buffer**. A **framebuffer** in memory is used to draw the UI and waveform, which is then sent to a VGA monitor via a simple resistor-based DAC. The entire user interface is managed by a **state machine** to handle different modes like `LIVE`, `PAUSED`, and `MENU`.
 
