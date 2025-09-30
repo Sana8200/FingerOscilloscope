@@ -6,11 +6,12 @@ extern void switch_test(void);
 extern void led_mirror(void);
 extern void counter(void);
 extern void adder(void);
-
-
-
+extern void sevenSegDisplay(void);
 
 void handle_interrupt() {}
+
+
+
 
 
 int main() {
@@ -19,11 +20,16 @@ int main() {
     unsigned int pattern = 0x07c;
 
     // Calling the assembly functions 
-    //led_test(pattern);
+    led_test(pattern);
     //switch_test();
     //led_mirror();
     //counter();
-    adder();
+    //adder();
+
+    // sevenSegDisplay();
+
+
+
 
     return 0;
 }
