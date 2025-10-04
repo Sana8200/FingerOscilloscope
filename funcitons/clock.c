@@ -1,7 +1,7 @@
+
 #include "hardware.h"
 #include "lib.h"
 #include "timer.h"
-
 
 // setting displays, 5, 4, 3, 2, 1, 0  : hourse, hours, minutes, minutes, seconds, seconds
 void set_timer_display(int hours, int minutes, int seconds) {
@@ -19,21 +19,23 @@ void set_timer_display(int hours, int minutes, int seconds) {
 #define PAUSE_SWITCH_BIT 6    // SW6 is used to Pause/Resum the program 
 #define EXIT_SWITCH_BIT  7    // SW7 is used to exit the program 
 
+#define LED_TICK  0x01
+#define LED_EXIT 0x80
+#define LED_PAUSE 0x40
+
 /*
  * clock_timer
  * Runs the primary clock loop using the hardware timer.
  * We replaced all delay() calls with a non-blocking check of the timer's hardware flag, makeing the program efficient and responsive. 
  */
 void clock_timer(void){
-
+  int timeoutcount = 0;
   int hours = 0;
   int minutes = 0;
   int seconds = 0;
 
-  // Clearning the display before starting 
   set_timer_display(0, 0, 0);
 
-  
   // Main infinite loop 
   while (1) {
     int led_state = 0;
@@ -42,44 +44,53 @@ void clock_timer(void){
 
      // --- Exit Condition ---
     if (( switch_state >> EXIT_SWITCH_BIT) & 0x1) {   
-      set_leds(0x80);      
-      break;   
+      set_leds(LED_EXIT);      
+      break;    
     }
  
-
     int is_paused = (switch_state >> PAUSE_SWITCH_BIT) & 0x01;
     if(is_paused){
-      led_state |= 0x40;    
+      led_state |= LED_PAUSE;   
     } 
 
-    
     if(!is_paused){
-      // --- Check for Timer Timeout Event ---
+      // This condition is only true for very brief moment every 100ms 
       if (*TIMER_STATUS & TIMER_STATUS_TO) { 
 
-        // A 100ms timeout event has occurred,Resetting the timeout flag. 
+        // A 100ms timeout event has occurred, Reset the hardware flag immediately.
         *TIMER_STATUS = TIMER_STATUS_TO;
 
-        // Increment the time on EVERY timeout event.
-        seconds++;
-        if (seconds >= 60) {
+        // --- 10Hz Blink Logic ---
+        set_leds(led_state | LED_TICK);
+        delay(25); 
+
+        timeoutcount++;
+
+        // Check if a full second has passed (10 * 100ms). (called once in 10 timeouts)
+        if(timeoutcount >= 10){
+          // Reset for the next second
+          timeoutcount = 0; 
+
+          // Now, incrementing the actual time 
+          seconds++;
+          if (seconds >= 60) {
             seconds = 0;
             minutes++;
-        }
-        if (minutes >= 60) {
+          }
+          if (minutes >= 60) {
             minutes = 0;
             hours++;
-        }
-        if (hours >= 24) {
+          }
+          if (hours >= 24) {
             hours = 0;
-        }
-            
-        // The display will be updated 10 times per second.
-        set_timer_display(hours, minutes, seconds);
+          }
+
+          // The display will be updated only once per second
+          set_timer_display(hours, minutes, seconds);
+        }      
       }
     }
-    
-  
+     
     set_leds(led_state);
       
     // --- Handle User Input PUSH BUTTON (runs continuously) ---
@@ -98,10 +109,7 @@ void clock_timer(void){
       delay(100);
     }
   }
-
   display_string("Program Ended.");
   set_timer_display(0,0,0);
 }
-
-
 
