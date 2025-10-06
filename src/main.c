@@ -2,63 +2,96 @@
 #include "vga_driver.h"  // For access to the VGA loop (vga_display_loop)
 #include "ad7705_driver.h"     
 #include <stdint.h>
+#include <stdio.h> 
 
+/* ************ 1. DTEKV HARDWARE DEFINITIONS (VERIFY THESE ADDRESSES/MASKS) ************ */
 
+// Memory-mapped address of the GPIO Output Data Register (0x40000e00 from DTEK-V table)
+#define GPIO_DATA_REG (*((volatile unsigned int *)0x40000e00))
+// Hypothetical address for the GPIO Direction Register (CRITICAL: MUST be verified!)
+#define GPIO_DIRECTION_REG (*((volatile unsigned int *)0x40000e04)) 
+// Processor Clock Frequency (30 MHz from the DTEK-V table)
+#define CPU_CLOCK_MHZ 30.0f 
+
+/* ********** 2. DTEKV HARDWARE IMPLEMENTATION FUNCTIONS ********** */
+/**
+ * @brief Sets the R, G, and B GPIO pins based on the 3-bit color value.
+ */
+void GPIO_set_pixel_data(Color color) {
+    unsigned int current_state = GPIO_DATA_REG;
+    current_state &= ~(PIN_MASK_R | PIN_MASK_G | PIN_MASK_B);
+    if (color & 0b100) { current_state |= PIN_MASK_R; } // Red (Bit 2)
+    if (color & 0b010) { current_state |= PIN_MASK_G; } // Green (Bit 1)
+    if (color & 0b001) { current_state |= PIN_MASK_B; } // Blue (Bit 0)
+    GPIO_DATA_REG = current_state;
+}
+
+/**
+ * @brief Sets the Horizontal Sync pin state.
+ */
+void GPIO_set_hsync(int state) {
+    if (state) {
+        GPIO_DATA_REG |= PIN_MASK_HSYNC;
+    } else {
+        GPIO_DATA_REG &= ~PIN_MASK_HSYNC;
+    }
+}
+
+/**
+ * @brief Sets the Vertical Sync pin state.
+ */
+void GPIO_set_vsync(int state) {
+    if (state) {
+        GPIO_DATA_REG |= PIN_MASK_VSYNC;
+    } else {
+        GPIO_DATA_REG &= ~PIN_MASK_VSYNC;
+    }
+}
+
+/**
+ * @brief Creates an approximate time delay in microseconds.
+ */
+void delay_us(float us) {
+    volatile unsigned int cycles_to_wait = (unsigned int)(us * CPU_CLOCK_MHZ / 3.0f); 
+    while (cycles_to_wait-- > 0) {
+        __asm__ volatile ("nop"); 
+    }
+}
+
+/* *********** 3. Main Program Entry Point - MERGED ADC AND VGA ********** */
+
+// Global variable to hold the latest ADC value for the drawing function
+// This needs to be updated by a separate IRQ/Thread for continuous sampling.
+volatile unsigned int latest_adc_value = 0; 
 
 int main() {
-    unsigned char high_byte, low_byte;
-    unsigned int adc_value;
-
-    // First, configuring the GPIO pins for SPI
-    spi_setup();
-
-
-    // Printing a startup message to the console
-    print_string("DTEK-V ADC Reader Initialized.\n");
-    delay(10000); // Small delay to ensure message prints
-
-
-
-    // --- 1. Configure the AD7705 ---
-    print_string("Configuring AD7705...\n");
     
-    *GPIO_DATA_ADDR &= ~CS_PIN;       // Set Chip Select LOW to start talking
-    spi_send_byte(CMD_SETUP_WRITE);   // Send command: "prepare to receive setup data"
-    spi_send_byte(SETUP_CONFIG);      // Send the actual setup configuration
-    *GPIO_DATA_ADDR |= CS_PIN;        // Set Chip Select HIGH to finish
+    // --- PART 1: HARDWARE INITIALIZATION ---
+
+    // 1. Configure the VGA GPIO pins as OUTPUTS
+    // This line is essential to enable the VGA pins.
+    GPIO_DIRECTION_REG |= VGA_PINS_MASK;
     
-    print_string("Configuration complete. Entering main loop.\n");
+    // 2. Configure the SPI pins for the AD7705
+    spi_setup(); 
+    
+    // 3. Configure the AD7705 ADC (Your original code)
+    // NOTE: CS_PIN must be defined elsewhere (e.g., ad7705_driver.h or another global file)
+    *GPIO_DATA_REG &= ~CS_PIN;       
+    spi_send_byte(CMD_SETUP_WRITE);   
+    spi_send_byte(SETUP_CONFIG);      
+    *GPIO_DATA_REG |= CS_PIN;        
 
-    // --- 2. Main Loop: Continuously Read Data ---
-    while (1) {
-        delay(100000); // Wait a bit between readings to control sample rate
+    // --- PART 2: START VGA DISPLAY ---
 
-        // Tell the ADC we want to read the 16-bit data
-        *GPIO_DATA_ADDR &= ~CS_PIN;       // Chip Select LOW
-        spi_send_byte(CMD_DATA_READ);     // Send command: "prepare to send data"
-        
-        // Receive the two bytes of data
-        high_byte = spi_receive_byte(); // Read the most significant 8 bits
-        low_byte = spi_receive_byte();  // Read the least significant 8 bits
-        
-        *GPIO_DATA_ADDR |= CS_PIN;        // Chip Select HIGH
+    // 4. Initial draw of the grid and axes (before entering the high-speed loop)
+    draw_waveform(); 
 
-        // --- 3. Process and Display the Result ---
-        
-        // Combine the two 8-bit bytes into a single 16-bit unsigned integer
-        adc_value = (high_byte << 8) | low_byte;
+    // 5. Start the continuous, high-speed VGA output loop.
+    // WARNING: This function takes control of the CPU and runs forever.
+    vga_display_loop(); 
 
-        // Display the 10 most significant bits on the LEDs (The baord has 10 LEDs at LEDS_ADDR)
-        *LEDD_ADDR = adc_value >> 6;
-
-        // Print the full numeric value to the console
-        print_string("ADC Value: ");
-        print_integer(adc_value);
-        print_string("\n");
-     
-    }
-
-    return 0; // This line will never be reached
+    return 0; // This line will never be reached in a functional embedded system
 }
 
 
