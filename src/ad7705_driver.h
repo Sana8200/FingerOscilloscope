@@ -8,11 +8,13 @@
 /* ========================================================================= */
 
 
+
 // --- Hardware Memory Addresses ---
 #define GPIO_DATA_REG  ((volatile unsigned int *) 0x040000e0)
 #define GPIO_DIR_REG   ((volatile unsigned int *) 0x040000e4)
 #define UART_JTAG_REG  ((volatile unsigned char *) 0x04000040)
 #define LED_REG        ((volatile unsigned int *) 0x04000000)
+
 
 
 
