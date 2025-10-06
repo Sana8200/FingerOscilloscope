@@ -6,7 +6,6 @@ A real-time digital oscilloscope built on the DTEK-V board. This project capture
 
 * **Live Waveform Display:** Renders signals on a VGA monitor with a measurement grid.
 * **Run/Stop Control:** Freeze the live display for detailed inspection.
-* **Save & Replay:** Record waveform snapshots to memory and view them later from a menu.
 * **Zoom & Pan:** Adjust time/voltage scales and shift the wave using onboard buttons and knobs.
 * **Dual-Mode Operation:** Switch seamlessly between live capture and replaying saved signals.
 
