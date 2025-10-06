@@ -11,12 +11,23 @@
 #define SCREEN_WIDTH  320
 #define SCREEN_HEIGHT 240
 
+// Color Definition (3-bit RGB)
+// Bit 0: Blue (B), Bit 1: Green (G), Bit 2: Red (R)
 typedef unsigned char Color; // 8-bit value, only 3 bits (RGB) are used 
 
+// Global Framebuffer Declaration 
+// The actual storage for the screen data is defined in framebuffer.c
 extern Color framebuffer[SCREEN_HEIGHT][SCREEN_WIDTH];
 
+/**
+ * @brief Sets a single pixel color in the framebuffer.
+ */
 void set_pixel(int x, int y, Color color);
 
+/**
+ * @brief Clears the screen and draws a mock waveform or grid.
+ * * In the final project, this will read ADC data and draw the scope trace.
+ */
 void draw_waveform();
 
 #endif // FRAMEBUFFER_H
