@@ -1,46 +1,49 @@
-#include "framebuffer.h" // For access to drawing functions (like draw_waveform)
-#include "vga_driver.h"  // For access to the VGA loop (vga_display_loop)
-#include "ad7705_driver.h"     
-#include <stdint.h>
 #include <stdio.h> 
+#include <stdint.h>
+#include "framebuffer.h" // For drawing functions and screen dimensions
+#include "vga_driver.h"  // For the main vga_display_loop()
+#include "ad7705_driver.h" // For ADC/SPI functions
 
-/* ************ 1. DTEKV HARDWARE DEFINITIONS (VERIFY THESE ADDRESSES/MASKS) ************ */
+// =========================================================
+// 1. DTEKV HARDWARE DEFINITIONS (Memory-Mapped Registers)
+// =========================================================
 
-// Memory-mapped address of the GPIO Output Data Register (0x40000e00 from DTEK-V table)
+// GPIO Registers (Verified from DTEK-V Map)
 #define GPIO_DATA_REG (*((volatile unsigned int *)0x40000e00))
-// Hypothetical address for the GPIO Direction Register (CRITICAL: MUST be verified!)
-#define GPIO_DIRECTION_REG (*((volatile unsigned int *)0x40000e04)) 
-// Processor Clock Frequency (30 MHz from the DTEK-V table)
+#define GPIO_DIRECTION_REG (*((volatile unsigned int *)0x40000e04)) // Assumed offset for Direction/Output Enable
+
+// Timer Registers (Verified from DTEK-V Map)
+#define TIMER_LOAD_REG (*((volatile unsigned int *)0x40000200)) // Used to set the counter value (2000 for 15kHz)
+#define TIMER_CTRL_REG (*((volatile unsigned int *)0x40000204)) // Assumed offset for control register
+
+// Processor Clock Frequency (30 MHz)
 #define CPU_CLOCK_MHZ 30.0f 
 
 // !!! --- CRITICAL: CUSTOMIZE THESE PIN MASKS BASED ON YOUR WIRING --- !!!
-// Assuming the following GPIO pins are used for the VGA output:
-#define PIN_MASK_B     (1 << 0) // Pin 0: Blue Data
-#define PIN_MASK_G     (1 << 1) // Pin 1: Green Data
-#define PIN_MASK_R     (1 << 2) // Pin 2: Red Data 
+// Example Pin Assignments (Adjust these based on your wiring!)
+#define PIN_MASK_B     (1 << 0) 
+#define PIN_MASK_G     (1 << 1) 
+#define PIN_MASK_R     (1 << 2) 
+#define PIN_MASK_HSYNC (1 << 3) 
+#define PIN_MASK_VSYNC (1 << 4) 
+#define CS_PIN         (1 << 5) // Chip Select pin for AD7705 (Example)
 
-#define PIN_MASK_HSYNC (1 << 3) // Pin 3: Horizontal Sync
-#define PIN_MASK_VSYNC (1 << 4) // Pin 4: Vertical Sync
-
-// Mask to set all VGA pins (0-4) as outputs
+// Mask to configure all VGA pins (0-4) as outputs
 #define VGA_PINS_MASK (PIN_MASK_B | PIN_MASK_G | PIN_MASK_R | PIN_MASK_HSYNC | PIN_MASK_VSYNC)
 
-/* ********** 2. DTEKV HARDWARE IMPLEMENTATION FUNCTIONS ********** */
-/**
- * @brief Sets the R, G, and B GPIO pins based on the 3-bit color value.
- */
+// =========================================================
+// 2. DTEKV HARDWARE IMPLEMENTATION FUNCTIONS
+// =========================================================
+
 void GPIO_set_pixel_data(Color color) {
     unsigned int current_state = GPIO_DATA_REG;
     current_state &= ~(PIN_MASK_R | PIN_MASK_G | PIN_MASK_B);
-    if (color & 0b100) { current_state |= PIN_MASK_R; } // Red (Bit 2)
-    if (color & 0b010) { current_state |= PIN_MASK_G; } // Green (Bit 1)
-    if (color & 0b001) { current_state |= PIN_MASK_B; } // Blue (Bit 0)
+    if (color & 0b100) { current_state |= PIN_MASK_R; } 
+    if (color & 0b010) { current_state |= PIN_MASK_G; } 
+    if (color & 0b001) { current_state |= PIN_MASK_B; } 
     GPIO_DATA_REG = current_state;
 }
 
-/**
- * @brief Sets the Horizontal Sync pin state.
- */
 void GPIO_set_hsync(int state) {
     if (state) {
         GPIO_DATA_REG |= PIN_MASK_HSYNC;
@@ -49,9 +52,6 @@ void GPIO_set_hsync(int state) {
     }
 }
 
-/**
- * @brief Sets the Vertical Sync pin state.
- */
 void GPIO_set_vsync(int state) {
     if (state) {
         GPIO_DATA_REG |= PIN_MASK_VSYNC;
@@ -60,9 +60,6 @@ void GPIO_set_vsync(int state) {
     }
 }
 
-/**
- * @brief Creates an approximate time delay in microseconds.
- */
 void delay_us(float us) {
     volatile unsigned int cycles_to_wait = (unsigned int)(us * CPU_CLOCK_MHZ / 3.0f); 
     while (cycles_to_wait-- > 0) {
@@ -70,41 +67,43 @@ void delay_us(float us) {
     }
 }
 
-/* *********** 3. Main Program Entry Point - MERGED ADC AND VGA ********** */
+// =========================================================
+// 3. Main Program Entry Point
+// =========================================================
 
-// Global variable to hold the latest ADC value for the drawing function
-// This needs to be updated by a separate IRQ/Thread for continuous sampling.
+// Global variable to hold the latest ADC value (used for linking to interrupt logic)
 volatile unsigned int latest_adc_value = 0; 
 
 int main() {
     
     // --- PART 1: HARDWARE INITIALIZATION ---
 
-    // 1. Configure the VGA GPIO pins as OUTPUTS
-    // This line is essential to enable the VGA pins.
+    // 1. Configure the VGA GPIO pins (0-4) as OUTPUTS
     GPIO_DIRECTION_REG |= VGA_PINS_MASK;
     
-    // 2. Configure the SPI pins for the AD7705
+    // 2. Configure the Timer for 15 kHz sampling rate (30 MHz / 15000 = 2000)
+    *TIMER_LOAD_REG = 2000; 
+    
+    // 3. Enable Timer Interrupt (Assumes 0x01 is the bitmask for enable/start)
+    // This allows handle_interrupt.c to run at 15kHz
+    *TIMER_CTRL_REG = 0x01; 
+    
+    // 4. Configure the SPI pins and AD7705 (Your original ADC setup)
     spi_setup(); 
     
-    // 3. Configure the AD7705 ADC (Your original code)
-    // NOTE: CS_PIN must be defined elsewhere (e.g., ad7705_driver.h or another global file)
+    // Assuming CMD_SETUP_WRITE and SETUP_CONFIG are defined in ad7705_driver.h
     *GPIO_DATA_REG &= ~CS_PIN;       
     spi_send_byte(CMD_SETUP_WRITE);   
     spi_send_byte(SETUP_CONFIG);      
     *GPIO_DATA_REG |= CS_PIN;        
 
-    // --- PART 2: START VGA DISPLAY ---
+    // --- PART 2: START DISPLAY ---
 
-    // 4. Initial draw of the grid and axes (before entering the high-speed loop)
+    // 5. Initial draw of the grid and axes
     draw_waveform(); 
 
-    // 5. Start the continuous, high-speed VGA output loop.
-    // WARNING: This function takes control of the CPU and runs forever.
+    // 6. Start the continuous, high-speed VGA output loop. (Never returns)
     vga_display_loop(); 
 
-    return 0; // This line will never be reached in a functional embedded system
+    return 0; 
 }
-
-
-
