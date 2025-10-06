@@ -11,4 +11,12 @@
 #define SCREEN_WIDTH  320
 #define SCREEN_HEIGHT 240
 
+typedef unsigned char Color; // 8-bit value, only 3 bits (RGB) are used 
+
+extern Color framebuffer[SCREEN_HEIGHT][SCREEN_WIDTH];
+
+void set_pixel(int x, int y, Color color);
+
+void draw_waveform();
+
 #endif // FRAMEBUFFER_H
