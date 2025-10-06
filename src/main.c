@@ -13,6 +13,18 @@
 // Processor Clock Frequency (30 MHz from the DTEK-V table)
 #define CPU_CLOCK_MHZ 30.0f 
 
+// !!! --- CRITICAL: CUSTOMIZE THESE PIN MASKS BASED ON YOUR WIRING --- !!!
+// Assuming the following GPIO pins are used for the VGA output:
+#define PIN_MASK_B     (1 << 0) // Pin 0: Blue Data
+#define PIN_MASK_G     (1 << 1) // Pin 1: Green Data
+#define PIN_MASK_R     (1 << 2) // Pin 2: Red Data 
+
+#define PIN_MASK_HSYNC (1 << 3) // Pin 3: Horizontal Sync
+#define PIN_MASK_VSYNC (1 << 4) // Pin 4: Vertical Sync
+
+// Mask to set all VGA pins (0-4) as outputs
+#define VGA_PINS_MASK (PIN_MASK_B | PIN_MASK_G | PIN_MASK_R | PIN_MASK_HSYNC | PIN_MASK_VSYNC)
+
 /* ********** 2. DTEKV HARDWARE IMPLEMENTATION FUNCTIONS ********** */
 /**
  * @brief Sets the R, G, and B GPIO pins based on the 3-bit color value.
