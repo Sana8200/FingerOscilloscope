@@ -1,4 +1,5 @@
-
+#include "framebuffer.h" // For access to drawing functions (like draw_waveform)
+#include "vga_driver.h"  // For access to the VGA loop (vga_display_loop)
 #include "ad7705_driver.h"     
 #include <stdint.h>
 
