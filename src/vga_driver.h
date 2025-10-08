@@ -20,6 +20,7 @@
  * the signal via GPIO with precise timing.
  */
 void vga_display_loop();
+
 // The hardware functions are now declared in main.c, but we 
 // still declare them here so vga_driver.c so we know they exist!
 extern void GPIO_set_pixel_data(Color color);

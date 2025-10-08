@@ -11,6 +11,7 @@ extern volatile unsigned int * const GPIO_DATA_REG;
 // Define the Chip Select Pin mask (example: bit 5)
 // CRITICAL: Verify this mask matches your hardware connection.
 #define CS_PIN        (1 << 5) 
+
 // Define the AD7705 command for reading data (adjust if necessary)
 #define CMD_DATA_READ 0x10 
 
@@ -25,7 +26,6 @@ void sample_adc_and_update_buffer() {
     uint16_t adc_value;
 
     // 1. SPI Communication to read the 16-bit data from AD7705 
-    
     // Set Chip Select LOW to initiate communication
     *GPIO_DATA_REG &= ~CS_PIN;       
     

@@ -4,6 +4,14 @@
 #include "vga_driver.h"  // For the main vga_display_loop()
 #include "ad7705_driver.h" // For ADC/SPI functions
 
+typedef enum {
+    LIVE_VIEW,
+    PAUSED,
+    MENU
+} OscilloscopeState;
+
+volatile OscilloscopeState current_state = LIVE_VIEW;
+
 // =========================================================
 // 1. DTEKV HARDWARE DEFINITIONS (Memory-Mapped Registers)
 // =========================================================
@@ -30,6 +38,8 @@
 
 // Mask to configure all VGA pins (0-4) as outputs
 #define VGA_PINS_MASK (PIN_MASK_B | PIN_MASK_G | PIN_MASK_R | PIN_MASK_HSYNC | PIN_MASK_VSYNC)
+
+
 
 // =========================================================
 // 2. DTEKV HARDWARE IMPLEMENTATION FUNCTIONS
