@@ -1,27 +1,37 @@
 #include "framebuffer.h"
+#include <math.h>
+#include <stdint.h>
 
-// --- Global Framebuffer Definition ---
-// This allocates the 75 KB of memory needed for the 320x240 screen.
 Color framebuffer[SCREEN_HEIGHT][SCREEN_WIDTH];
 
-/**
- * @brief Sets a single pixel color in the framebuffer.
- */
+// Forward declaration for buttons
+extern void handle_buttons(void);
+extern volatile int current_state;
+
+// --- Set a single pixel ---
 void set_pixel(int x, int y, Color color) {
     if (x >= 0 && x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT) {
         framebuffer[y][x] = color;
     }
 }
 
-/**
- * @brief Clears the screen and draws a mock waveform.
- */
+// --- Clear screen ---
+void clear_screen(Color color) {
+    for (int y = 0; y < SCREEN_HEIGHT; y++) {
+        for (int x = 0; x < SCREEN_WIDTH; x++) {
+            framebuffer[y][x] = color;
+        }
+    }
+}
+
+// --- Draw waveform with state machine ---
 void draw_waveform() {
-    // Clear screen
+    handle_buttons();  // check buttons every frame
+
     clear_screen(COLOR_BLACK);
 
+    Color red = COLOR_RED;
     Color green = COLOR_GREEN;
-    Color red   = COLOR_RED;
 
     // Draw grid
     for (int x = 0; x < SCREEN_WIDTH; x++) {
@@ -29,46 +39,23 @@ void draw_waveform() {
         set_pixel(SCREEN_WIDTH / 2, x % SCREEN_HEIGHT, red);
     }
 
-    // Only draw waveform in LIVE_VIEW or PAUSED
-    if (current_state == LIVE_VIEW || current_state == PAUSED) {
+    // Draw sine wave for LIVE_VIEW or PAUSED
+    if (current_state == 0 || current_state == 1) { // 0=LIVE_VIEW, 1=PAUSED
         for (int x = 0; x < SCREEN_WIDTH; x++) {
-            float scale = 60.0f; 
-            float offset = 120.0f; 
-            float frequency = 30.0f; 
-            int y_value = (int)(offset + scale * sin((float)x / frequency));
+            float scale = 60.0f;
+            float offset = 120.0f;
+            float frequency = 30.0f;
+            int y_value = (int)(offset + scale * sinf((float)x / frequency));
             set_pixel(x, y_value, green);
         }
     }
 
-    // MENU state: you can draw menu options here
-    if (current_state == MENU) {
-        // Example: draw "MENU" text at center
-        // draw_text(SCREEN_WIDTH/2 - 20, SCREEN_HEIGHT/2, "MENU", COLOR_WHITE);
+    // Menu placeholder
+    if (current_state == 2) { // MENU
+        for (int y = 100; y < 140; y++) {
+            for (int x = 140; x < 180; x++) {
+                set_pixel(x, y, COLOR_WHITE);
+            }
+        }
     }
 }
-
-
-    // 2. Define colors
-    Color green = 0b010; // Green trace
-    Color red   = 0b100; // Red grid lines
-
-    // 3. Draw a simple grid (Example: horizontal center line)
-    for (int x = 0; x < SCREEN_WIDTH; x++) {
-        set_pixel(x, SCREEN_HEIGHT / 2, red);
-        set_pixel(SCREEN_WIDTH / 2, x % SCREEN_HEIGHT, red); // Vertical line example
-    }
-
-    // 4. Draw a mock waveform (like an oscilloscope trace)
-    for (int x = 0; x < SCREEN_WIDTH; x++) {
-        // Calculate Y value: scaled sine wave + offset for center
-        float scale = 60.0f; 
-        float offset = 120.0f; 
-        float frequency = 30.0f; 
-        
-        int y_value = (int)(offset + scale * sin((float)x / frequency));
-        
-        set_pixel(x, y_value, green);
-    }
-}
-
-
