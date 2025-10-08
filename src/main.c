@@ -84,10 +84,21 @@ void delay_us(float us) {
 // Global variable to hold the latest ADC value (used for linking to interrupt logic)
 volatile unsigned int latest_adc_value = 0; 
 
+void handle_buttons() {
+    if (button_live_pressed()) {
+        current_state = LIVE_VIEW;
+    }
+    if (button_pause_pressed()) {
+        current_state = PAUSED;
+    }
+    if (button_menu_pressed()) {
+        current_state = MENU;
+    }
+}
+
 int main() {
     
     // --- PART 1: HARDWARE INITIALIZATION ---
-
     // 1. Configure the VGA GPIO pins (0-4) as OUTPUTS
     GPIO_DIRECTION_REG |= VGA_PINS_MASK;
     
@@ -114,6 +125,6 @@ int main() {
 
     // 6. Start the continuous, high-speed VGA output loop. (Never returns)
     vga_display_loop(); 
-
+ 
     return 0; 
 }
