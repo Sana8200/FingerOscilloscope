@@ -17,12 +17,36 @@ void set_pixel(int x, int y, Color color) {
  * @brief Clears the screen and draws a mock waveform.
  */
 void draw_waveform() {
-    // 1. Clear the screen to Black (Color 0)
-    for (int y = 0; y < SCREEN_HEIGHT; y++) {
+    // Clear screen
+    clear_screen(COLOR_BLACK);
+
+    Color green = COLOR_GREEN;
+    Color red   = COLOR_RED;
+
+    // Draw grid
+    for (int x = 0; x < SCREEN_WIDTH; x++) {
+        set_pixel(x, SCREEN_HEIGHT / 2, red);
+        set_pixel(SCREEN_WIDTH / 2, x % SCREEN_HEIGHT, red);
+    }
+
+    // Only draw waveform in LIVE_VIEW or PAUSED
+    if (current_state == LIVE_VIEW || current_state == PAUSED) {
         for (int x = 0; x < SCREEN_WIDTH; x++) {
-            framebuffer[y][x] = 0; // Black (R=0, G=0, B=0)
+            float scale = 60.0f; 
+            float offset = 120.0f; 
+            float frequency = 30.0f; 
+            int y_value = (int)(offset + scale * sin((float)x / frequency));
+            set_pixel(x, y_value, green);
         }
     }
+
+    // MENU state: you can draw menu options here
+    if (current_state == MENU) {
+        // Example: draw "MENU" text at center
+        // draw_text(SCREEN_WIDTH/2 - 20, SCREEN_HEIGHT/2, "MENU", COLOR_WHITE);
+    }
+}
+
 
     // 2. Define colors
     Color green = 0b010; // Green trace
