@@ -1,110 +1,97 @@
-/**
- * @file ad7705_driver.c
- * @brief AD7705 specific configuration and data reading routines.
- * This file handles the logic for talking to the AD7705 ADC.
- */
-
 #include "ad7705_driver.h"
+#include "spi_driver.h"     // To call SPI_init() and SPI_transfer_byte()
+#include "hardware.h"       // For direct access to GPIO and pin definitions
 
-// =============================================================================
-// 1. AD7705 COMMUNICATION PRIMITIVES
-// =============================================================================
+// This function must be provided by another file (e.g., timetemplate.S)
+// for creating short hardware delays.
+extern void delay(int cycles);
 
 /**
- * @brief Performs a hardware reset on the AD7705 using the RST pin.
+ * @brief Resets the AD7705 to its default state via the RST pin.
+ * Pulls the reset pin low, waits, then brings it high.
  */
-void ad7705_hardware_reset(void) {
-    // 1. Pull RST low to initiate the reset sequence.
-    RST_LOW();
-    delay(1000); 
-    
-    // 2. Raise RST high to return to normal operating mode.
-    RST_HIGH();
-    delay(100000); // Wait for chip to stabilize before configuration.
+void AD7705_reset(void) {
+    // Pull the reset pin low to activate the reset
+    *pGPIO_DATA &= ~ADC_RST_PIN;
+    delay(100); // Hold reset for a short time
+
+    // Release the reset pin
+    *pGPIO_DATA |= ADC_RST_PIN;
+    delay(100);
 }
 
 /**
- * @brief Helper function to write a configuration byte to an AD7705 register.
- * This function handles the Chip Select and sequential SPI transfers for writing.
- * @param comm_byte Communication byte (register address + WRITE flag).
- * @param data_byte The 8-bit data to write (the actual setting).
+ * @brief Initializes the AD7705.
+ * Resets the chip, configures its registers, and starts the initial self-calibration.
  */
-static void ad7705_write_reg(unsigned char comm_byte, unsigned char data_byte) {
-    CS_LOW(); // Start communication
-    spi_transfer(comm_byte); // Send the target register address and 'Write' command.
-    spi_transfer(data_byte); // Send the actual configuration data.
-    CS_HIGH(); // End communication
-}
+void AD7705_init(void) {
+    // 1. Initialize the underlying SPI communication pins
+    SPI_init();
 
-/**
- * @brief Waits until the DRDY pin signals data is ready (Active Low).
- * This is a blocking function, ensuring we read the data only after conversion completes.
- */
-void ad7705_wait_for_data_ready(void) {
-    volatile unsigned int timeout = 1000000; 
-    
-    // Loop while the DRDY pin is HIGH (data not ready) AND we haven't timed out.
-    while (DRDY_READ() && timeout-- > 0) { 
-        // Spin lock (waiting)
+    // 2. Perform a hardware reset on the chip
+    AD7705_reset();
+    // Wait a longer time for the chip's internal oscillator to stabilize
+    delay(200000);
+
+    // 3. Synchronize the serial interface. After a reset, sending at least
+    //    32 high bits (4 bytes of 0xFF) ensures the ADC is ready for a command.
+    *pGPIO_DATA &= ~SPI_CS_N_PIN; // Select the chip
+    SPI_transfer_byte(0xFF);
+    SPI_transfer_byte(0xFF);
+    SPI_transfer_byte(0xFF);
+    SPI_transfer_byte(0xFF);
+    *pGPIO_DATA |= SPI_CS_N_PIN; // Deselect the chip
+    delay(100);
+
+    // 4. Configure the Clock Register
+    *pGPIO_DATA &= ~SPI_CS_N_PIN; // Select chip
+    // Send command: "The next operation is a WRITE to the CLOCK register"
+    SPI_transfer_byte(AD7705_REG_CLOCK | AD7705_WRITE_OP);
+    // Send the configuration value for the clock register
+    SPI_transfer_byte(CLOCK_REG_CONFIG);
+    *pGPIO_DATA |= SPI_CS_N_PIN; // Deselect chip
+    delay(100);
+
+    // 5. Configure the Setup Register to start a self-calibration
+    *pGPIO_DATA &= ~SPI_CS_N_PIN; // Select chip
+    // Send command: "The next operation is a WRITE to the SETUP register"
+    SPI_transfer_byte(AD7705_REG_SETUP | AD7705_WRITE_OP);
+    // Send the value that triggers a self-calibration
+    SPI_transfer_byte(SETUP_REG_CONFIG_CALIBRATE);
+    *pGPIO_DATA |= SPI_CS_N_PIN; // Deselect chip
+
+    // 6. Wait for the self-calibration to complete. The DRDY (Data Ready)
+    //    pin will go low when the calibration is finished.
+    // DRDY is active-low, so we wait while the pin is HIGH.
+    while (*pGPIO_DATA & ADC_DRDY_PIN) {
+        // Do nothing, just wait.
     }
-    
-    if (timeout <= 0) {
-        print_string("AD7705 Timeout Error! Data Ready pin not asserted.\n");
-    }
-}
-
-
-// =============================================================================
-// 2. AD7705 INITIALIZATION AND DATA READING
-// =============================================================================
-
-/**
- * @brief Initializes and configures the AD7705 for operation.
- * Configures the clock source, update rate, and selects Channel 1 with Gain=1.
- */
-void ad7705_init(void) {
-    // 1. Hardware Reset: Ensure the chip is in a known good state.
-    ad7705_hardware_reset();
-
-    // 2. Software Reset: Send 32 '1's (4 bytes of 0xFF) to resync SPI interface.
-    CS_LOW();
-    for (int i = 0; i < 4; i++) {
-        spi_transfer(0xFF); 
-    }
-    CS_HIGH();
-    delay(1000); 
-
-    // 3. Write Clock Register: Set 1kHz update rate (AD7705_CLOCK_INIT = 0x0C).
-    ad7705_write_reg(REG_CLOCK_WRITE, AD7705_CLOCK_INIT);
-
-    // 4. Write Setup Register: Set Normal mode, Gain=1, Unipolar (AD7705_SETUP_INIT = 0x00).
-    ad7705_write_reg(REG_SETUP_WRITE, AD7705_SETUP_INIT);
 }
 
 /**
- * @brief Reads the 16-bit ADC conversion result from the Data Register.
- * @return The 16-bit raw ADC value (0 to 65535).
+ * @brief Reads the 16-bit data result from the ADC.
  */
-unsigned int ad7705_read_data(void) {
-    unsigned char high_byte, low_byte;
-    unsigned int result; 
-    
-    // 1. Wait for a new measurement to be completed.
-    ad7705_wait_for_data_ready();
-    
-    // 2. Send Data Register Read command.
-    CS_LOW();
-    spi_transfer(REG_DATA_READ); 
+uint16_t AD7705_read_data(void) {
+    uint8_t high_byte, low_byte;
 
-    // 3. Read 16 bits (High byte first, Low byte second).
-    // Send dummy bytes (0xFF) to generate clock pulses for the ADC to transmit its data.
-    high_byte = spi_transfer(0xFF); 
-    low_byte = spi_transfer(0xFF);  
+    // 1. Wait for the next conversion to be ready.
+    // The DRDY pin will go low when a new sample is available.
+    while (*pGPIO_DATA & ADC_DRDY_PIN) {
+        // Do nothing, just wait.
+    }
 
-    CS_HIGH();
+    // 2. Read the 16-bit result from the data register.
+    *pGPIO_DATA &= ~SPI_CS_N_PIN; // Select chip
 
-    // 4. Combine bytes: Shift high byte left by 8 and combine with the low byte.
-    result = ((unsigned int)high_byte << 8) | low_byte;
+    // Send command: "The next operation is a READ from the DATA register"
+    SPI_transfer_byte(AD7705_REG_DATA | AD7705_READ_OP);
 
-    return result;
+    // Clock in the two bytes of data by sending two dummy bytes.
+    high_byte = SPI_transfer_byte(0x00); // Read the Most Significant Byte
+    low_byte = SPI_transfer_byte(0x00);  // Read the Least Significant Byte
+
+    *pGPIO_DATA |= SPI_CS_N_PIN; // Deselect chip
+
+    // 3. Combine the two 8-bit bytes into a single 16-bit value and return it.
+    return ((uint16_t)high_byte << 8) | low_byte;
 }
