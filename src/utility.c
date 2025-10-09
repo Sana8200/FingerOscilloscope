@@ -1,51 +1,50 @@
-/**
- * @file utility.c
- * @brief Contains low-level hardware communication functions (JTAG UART) 
- * and basic timing utilities required by the main application and drivers.
- */
+#include "hardware.h" // Includes GetBtn(), print functions, and hardware addresses
+#include "framebuffer.h" // Includes AppState_t, STATE_LIVE, etc.
+#include <stdint.h>
+#include <stdbool.h>
 
-#include "ad7705_driver.h" // Includes JTAG_UART_DATA address for console output
+// External function for precise, processor-specific delay
+extern void delay(int cycles); 
 
-// =============================================================================
-// 1. JTAG UART OUTPUT (Console Printing)
-// =============================================================================
+// --- System Variables ---
+// A simple millisecond counter updated by the Timer ISR
+volatile int ms_counter = 0;
 
-/**
- * @brief Sends a single character to the JTAG UART for console output.
- * @param character The character to send.
- */
-static void print_char(char character) {
-    // We write the character into the low byte of the 32-bit data register 
-    // at the JTAG_UART_DATA address (0x04000040).
-    *JTAG_UART_DATA = (unsigned int)character; 
-}
 
-/**
- * @brief Prints a null-terminated string to the JTAG UART.
- * This function is used for all text output and debugging.
- * @param str The string to print.
- */
-void print_string(const char* str) {
-    while (*str != '\0') {
-        print_char(*str);
-        str++;
+/* Software delay loop that executes a fixed number of CPU cycles. 
+   This function is typically implemented in Assembly for accuracy. */
+void delay_ms(int ms) {
+    // This is a simple approximation. For actual time-accurate delays, 
+    // you should rely on the Timer hardware.
+
+    // For simplicity, we calculate a large number of cycles to delay:
+    // This assumes a high clock frequency (e.g., 50,000 cycles is approx 1ms at 50MHz).
+    for (int i = 0; i < ms; i++) {
+        // Delay 1ms (adjust 50000 based on your actual CPU clock speed)
+        delay(50000); 
     }
 }
 
-// =============================================================================
-// 2. TIMING UTILITIES
-// =============================================================================
 
-/**
- * @brief Simple busy-wait loop for creating a delay.
- * The actual time depends on the CPU clock speed. Used to meet timing 
- * requirements for the AD7705 and for simple application delays.
- * @param cycles The number of loop iterations to perform.
- */
-void delay(int cycles) {
-    // Using 'volatile' ensures the compiler does not optimize this loop away.
-    volatile int i;
-    for (i = 0; i < cycles; i++) {
-        // Busy wait loop
+/* --- Button Handling and State Machine --- */
+
+/* Checks for button presses and updates the main application state. */
+void HandleButtonPress(void) {
+    static bool button_pressed_last = false;
+    
+    // GetBtn() returns 1 if pressed (non-zero), 0 if not (based on hardware.c)
+    bool button_current = (GetBtn() != 0); 
+    
+    // Check for a transition from released (false) to pressed (true) (rising edge)
+    if (button_current && !button_pressed_last) {
+        
+        // Cycle through states: LIVE -> PAUSED -> MENU -> LIVE
+        AppState++;
+        if (AppState > STATE_MENU) { 
+            AppState = STATE_LIVE; // Wrap back to LIVE_VIEW (0)
+        }
     }
+    
+    // Store the current state for the next check (debounce logic)
+    button_pressed_last = button_current;
 }

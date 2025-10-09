@@ -1,24 +1,18 @@
 #ifndef VGA_DRIVER_H
 #define VGA_DRIVER_H
-
 #include <stdint.h> // For uint16_t, the type for our pixel color
 
-//=============================================================================
-//                     VGA Display Constants
-//=============================================================================
 
 // Screen dimensions in pixels for the standard 320x240 VGA controller mode
 #define VGA_WIDTH  320
 #define VGA_HEIGHT 240
 
-//=============================================================================
-//                     VGA Color Definitions (16-bit RGB 5-6-5 format)
-//=============================================================================
+
+// VGA Color Definitions (16-bit RGB 5-6-5 format)
 // A 16-bit color value is packed into a uint16_t as follows:
 // Bits 15-11: Red   (5 bits)
 // Bits 10-5:  Green (6 bits)
 // Bits 4-0:   Blue  (5 bits)
-
 // This helper macro creates a 16-bit color value from 8-bit R, G, B components.
 // It correctly shifts and masks the values.
 #define RGB_TO_16BIT(r,g,b) ( (((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3) )
