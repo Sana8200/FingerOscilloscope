@@ -14,7 +14,7 @@ main.elf:
 	$(TOOLCHAIN)gcc -c $(CFLAGS) $(SOURCES)
 	$(TOOLCHAIN)ld -o $@ -T $(LINKER) $(filter-out boot.o, $(OBJECTS)) softfloat.a
 
-main.bin: main.elf
+main.bin: main.elf  
 	$(TOOLCHAIN)objcopy --output-target binary $< $@
 	$(TOOLCHAIN)objdump -D $< > $<.txt
 

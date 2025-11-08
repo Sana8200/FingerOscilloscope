@@ -1,3 +1,4 @@
+
 #ifndef HARDWARE_H
 #define HARDWARE_H
 
@@ -27,10 +28,7 @@
 // Parallel I/O (PIO) for the 7-segment displays
 #define SEV_SEG_DISPLAY_BASE    0x04000050
 
-// --- VGA Controller ---
-// The start address of the 320x240 pixel buffer in memory.
-// IMPORTANT: Please verify this address is correct for your system design!
-#define VGA_PIXEL_BUFFER_BASE   0x08000000
+
 
 
 //=============================================================================
@@ -51,7 +49,7 @@
 #define pPUSH_BUTTONS           ((volatile uint32_t *) PUSH_BUTTON_BASE)
 #define pSWITCHES               ((volatile uint32_t *) SWITCH_BASE)
 #define pLEDS                   ((volatile uint32_t *) LED_BASE)
-#define pVGA_PIXEL_BUFFER       ((volatile uint16_t*) VGA_PIXEL_BUFFER_BASE)
+
 
 
 #endif // HARDWARE_H
