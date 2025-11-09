@@ -75,6 +75,7 @@ void vga_draw_box_outline(int x, int y, int width, int height, uint16_t color) {
 
 
 
+
 // Draws a solid, filled rectangle.
 void vga_draw_filled_box(int x, int y, int width, int height, uint16_t color) {
     for (int current_y = y; current_y < (y + height); current_y++) {

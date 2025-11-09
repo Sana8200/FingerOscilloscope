@@ -61,7 +61,15 @@ void spi_wait_for_ready() {
 
 
 
-// Sends one byte and receives one byte (MSB first).
+
+// Sends and recieves one byte via SPI bit-banging. (Mode 0)
+// CPOL = 0, CPHA = 0, based on AD7705 datasheet requirements.
+/*
+ * Ad7705 timing diagram (figrue 19, 20)
+ * Clock is idles LOW
+ * Data is writtien (MOSI) on rising edge
+ * Data is read (MISO) on falling edge
+ */
 uint8_t spi_transfer_byte(uint8_t byte_out) {
     uint8_t byte_in = 0;
 
@@ -96,3 +104,5 @@ uint8_t spi_transfer_byte(uint8_t byte_out) {
     }
     return byte_in;     // Return the received byte
 }
+
+
