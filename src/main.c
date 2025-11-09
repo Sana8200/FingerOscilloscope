@@ -1,6 +1,9 @@
-#include "hardware.h"
+
 #include "vga_driver.h"
 #include "ad7705_driver.h"
+#include "hardware.h"
+#include <stdint.h>
+#include <stdbool.h>
 
 
 
@@ -11,61 +14,76 @@ void handle_interrupt(unsigned cause) {
 
 
 
-// Global to track the last plotted point
-int last_y = SCREEN_HEIGHT / 2;
-int current_x = 0;
+// This buffer stores all the y-coordinates for the waveform.
+static uint16_t sample_buffer[SCREEN_WIDTH];
 
-/**
- * @brief Scales a 16-bit ADC value (0-65535) to a Y-coordinate (0-239).
- */
+
+// Helper function to scale the 16-bit ADC value (0-65535) to a Y-coordinate (0-239)
 int scale_adc_to_y(uint16_t adc_val) {
-    // 65535 / 239 = 274.18
-    // We can approximate this with integer division.
-    // This scales the 0-65535 range to fit the 0-239 pixel screen height.
-    // We subtract from 239 to flip it, since 0V=0 and 5V=65535 (bottom to top)
+    // This scales 0 -> 239 (bottom) and 65535 -> 0 (top)
+    // 65535 / 274 = 239.17
     return 239 - (adc_val / 274);
 }
 
+
+
 int main() {
     
-    // --- Static Setup ---
+    // --- 1. Initialization ---
     vga_clear_screen(COLOR_BLACK);
-    // Draw a horizontal line in the middle of the screen
-    vga_draw_line(0, SCREEN_HEIGHT / 2, SCREEN_WIDTH - 1, SCREEN_HEIGHT / 2, COLOR_GRID_BLUE);
+    vga_draw_grid();
+    ad7705_init(); // Initialize and calibrate the ADC
 
-    // --- Initialize Hardware ---
-    ad7705_init(); // This will reset and calibrate the ADC
+    // Fill the sample buffer with an initial "ground" reading
+    uint16_t initial_val = ad7705_read_data();
+    int initial_y = scale_adc_to_y(initial_val);
+    for (int i = 0; i < SCREEN_WIDTH; i++) {
+        sample_buffer[i] = initial_y;
+    }
 
-    // --- Main Loop ---
+    int x_pos = 0; // Current horizontal position on the screen
+    
     while(1) {
         
-        // 1. ERASE the old pixel
-        //    (This also erases the grid line, so we redraw it)
-        vga_draw_pixel(current_x, last_y, COLOR_BLACK);
-        vga_draw_pixel(current_x, SCREEN_HEIGHT / 2, COLOR_GRID_BLUE); // Redraw grid
+        // 3. Acquire ONE new sample ---
+        // This call will pause until the ADC has new data (~20ms)
+        uint16_t new_adc_val = ad7705_read_data();
+        int new_y = scale_adc_to_y(new_adc_val);
 
-        // 2. READ a new value from the ADC
-        uint16_t adc_val = ad7705_read_data();
-        
-        // 3. SCALE the value to a Y-coordinate
-        int current_y = scale_adc_to_y(adc_val);
-        
-        // 4. DRAW the new pixel
-        vga_draw_pixel(current_x, current_y, COLOR_YELLOW);
-        
-        // 5. UPDATE state for next loop
-        last_y = current_y;
-        current_x++;
-        
-        // 6. WRAP screen
-        if (current_x >= SCREEN_WIDTH) {
-            current_x = 0;
-            // Clear the screen when we wrap
-            vga_clear_screen(COLOR_BLACK);
-            vga_draw_line(0, SCREEN_HEIGHT / 2, SCREEN_WIDTH - 1, SCREEN_HEIGHT / 2, COLOR_GRID_BLUE);
+
+        // 4. Erase Old Pixel and Redraw Grid ---
+        vga_draw_line(x_pos, 0, x_pos, SCREEN_HEIGHT - 1, COLOR_BLACK);
+
+        // Redraw the grid lines that we just erased
+        if (x_pos % (SCREEN_WIDTH / 10) == 0) { // 10 = GRID_DIVISIONS_X
+            vga_draw_line(x_pos, 0, x_pos, SCREEN_HEIGHT - 1, COLOR_DARK_GRAY); // Main axis
+        } else {
+            vga_draw_line(x_pos, 0, x_pos, SCREEN_HEIGHT - 1, COLOR_GRID_BLUE); // Minor axis
         }
+        
+        // Redraw the horizontal grid pixels that got erased
+        for (int i = 1; i < 8; i++) { // 8 = GRID_DIVISIONS_Y
+            vga_draw_pixel(x_pos, i * (SCREEN_HEIGHT / 8), COLOR_GRID_BLUE);
+        }
+        vga_draw_pixel(x_pos, SCREEN_HEIGHT / 2, COLOR_DARK_GRAY); // Horizontal main axis
+
+
+        // 5. Draw New Pixel and Update Buffer ---
+        vga_draw_pixel(x_pos, new_y, COLOR_YELLOW);
+        
+        // Store the new value in our buffer
+        sample_buffer[x_pos] = new_y;
+
+        // Move to the next horizontal position ---
+        x_pos++;
+        if (x_pos >= SCREEN_WIDTH) {
+            x_pos = 0; // Wrap around to the beginning
+        }
+        
+        // Flash LEDs to show the main loop is running
+        // The LED pattern will "scroll" as x_pos increases
+        *pLEDS = (1 << (x_pos % 8)); 
     }
     
     return 0;
 }
-
