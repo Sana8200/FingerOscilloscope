@@ -44,7 +44,7 @@ void vga_draw_line(int x1, int y1, int x2, int y2, uint16_t color) {
     while (1) {
         vga_draw_pixel(x1, y1, color);
 
-        if (x1 == x2 && y1 == y1) {
+        if (x1 == x2 && y1 == y2) {
             break;
         }
 

@@ -1,6 +1,6 @@
 #ifndef VGA_DRIVER_H
 #define VGA_DRIVER_H
-#include <stdint.h> // For uint16_t, the type for our pixel color
+#include <stdint.h> 
 
 
 // Screen dimensions in pixels for the standard 320x240 VGA controller mode
@@ -20,6 +20,8 @@
  * GGG = 3 bits for Green
  * BB  = 2 bits for Blue
  */
+
+// Check this since color is 8 bit and vga input is defined 16 bit, worked but still not right theoretically
 #define COLOR_BLACK         0x00 // 0b000 000 00
 #define COLOR_WHITE         0xFF // 0b111 111 11
 #define COLOR_RED           0xE0 // 0b111 000 00
