@@ -56,7 +56,7 @@ int main() {
 
         // Redraw the grid lines that we just erased
         if (x_pos % (SCREEN_WIDTH / 10) == 0) { // 10 = GRID_DIVISIONS_X
-            vga_draw_line(x_pos, 0, x_pos, SCREEN_HEIGHT - 1, COLOR_DARK_GRAY); // Main axis
+            vga_draw_line(x_pos, 0, x_pos, SCREEN_HEIGHT - 1, COLOR_RED); // Main axis
         } else {
             vga_draw_line(x_pos, 0, x_pos, SCREEN_HEIGHT - 1, COLOR_GRID_BLUE); // Minor axis
         }
@@ -65,7 +65,7 @@ int main() {
         for (int i = 1; i < 8; i++) { // 8 = GRID_DIVISIONS_Y
             vga_draw_pixel(x_pos, i * (SCREEN_HEIGHT / 8), COLOR_GRID_BLUE);
         }
-        vga_draw_pixel(x_pos, SCREEN_HEIGHT / 2, COLOR_DARK_GRAY); // Horizontal main axis
+        vga_draw_pixel(x_pos, SCREEN_HEIGHT / 2, COLOR_RED); // Horizontal main axis
 
 
         // 5. Draw New Pixel and Update Buffer ---

@@ -1,6 +1,12 @@
 #include "vga_driver.h"
 #include "hardware.h" // For pVGA_PIXEL_BUFFER, SCREEN_WIDTH, etc.
 
+
+#define GRID_DIVISIONS_X 10 
+#define GRID_DIVISIONS_Y 8
+
+
+
 // Provides the 'abs' function, required since we don't use the standard library.
 int abs(int n)
 {
@@ -84,4 +90,29 @@ void vga_draw_filled_box(int x, int y, int width, int height, uint16_t color) {
             vga_draw_pixel(current_x, current_y, color);
         }
     }
+}
+
+
+
+
+void vga_draw_grid() {
+    int i;
+    
+    // 1. Calculate Spacing
+    int x_spacing = SCREEN_WIDTH / GRID_DIVISIONS_X; // 320 / 10 = 32 pixels
+    int y_spacing = SCREEN_HEIGHT / GRID_DIVISIONS_Y; // 240 / 8 = 30 pixels
+
+    // 2. Draw Vertical Grid Lines
+    for (i = 1; i < GRID_DIVISIONS_X; i++) {
+        vga_draw_line(i * x_spacing, 0, i * x_spacing, SCREEN_HEIGHT - 1, COLOR_GRID_BLUE);
+    }
+
+    // 3. Draw Horizontal Grid Lines
+    for (i = 1; i < GRID_DIVISIONS_Y; i++) {
+        vga_draw_line(0, i * y_spacing, SCREEN_WIDTH - 1, i * y_spacing, COLOR_GRID_BLUE);
+    }
+
+    // 4. Draw Main Axes
+    vga_draw_line(0, SCREEN_HEIGHT / 2, SCREEN_WIDTH - 1, SCREEN_HEIGHT / 2, COLOR_DARK_GRAY); // X-axis
+    vga_draw_line(SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2, SCREEN_HEIGHT - 1, COLOR_DARK_GRAY); // Y-axis
 }

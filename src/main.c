@@ -31,7 +31,7 @@ int main() {
     
     // --- 1. Initialization ---
     vga_clear_screen(COLOR_BLACK);
-    vga_draw_grid();
+    //vga_draw_box_outline();
     ad7705_init(); // Initialize and calibrate the ADC
 
     // Fill the sample buffer with an initial "ground" reading

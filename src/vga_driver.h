@@ -41,5 +41,6 @@ void vga_clear_screen(uint16_t color);
 void vga_draw_line(int x1, int y1, int x2, int y2, uint16_t color);
 void vga_draw_box_outline(int x, int y, int width, int height, uint16_t color);
 void vga_draw_filled_box(int x, int y, int width, int height, uint16_t color);
+void vga_draw_grid();
 
 #endif // VGA_DRIVER_H
