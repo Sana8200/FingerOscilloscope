@@ -94,25 +94,23 @@ void vga_draw_filled_box(int x, int y, int width, int height, uint16_t color) {
 
 
 
-
+// Draws a grid on the screen, for x and y axes
 void vga_draw_grid() {
     int i;
-    
-    // 1. Calculate Spacing
-    int x_spacing = SCREEN_WIDTH / GRID_DIVISIONS_X; // 320 / 10 = 32 pixels
-    int y_spacing = SCREEN_HEIGHT / GRID_DIVISIONS_Y; // 240 / 8 = 30 pixels
+    int x_spacing = SCREEN_WIDTH / GRID_DIVISIONS_X; // 32
+    int y_spacing = SCREEN_HEIGHT / GRID_DIVISIONS_Y; // 30
 
-    // 2. Draw Vertical Grid Lines
+    // Draw vertical grid lines (darker)
     for (i = 1; i < GRID_DIVISIONS_X; i++) {
         vga_draw_line(i * x_spacing, 0, i * x_spacing, SCREEN_HEIGHT - 1, COLOR_GRID_BLUE);
     }
 
-    // 3. Draw Horizontal Grid Lines
+    // Draw horizontal grid lines (darker)
     for (i = 1; i < GRID_DIVISIONS_Y; i++) {
         vga_draw_line(0, i * y_spacing, SCREEN_WIDTH - 1, i * y_spacing, COLOR_GRID_BLUE);
     }
 
-    // 4. Draw Main Axes
+    // Draw main axes 
     vga_draw_line(0, SCREEN_HEIGHT / 2, SCREEN_WIDTH - 1, SCREEN_HEIGHT / 2, COLOR_DARK_GRAY); // X-axis
     vga_draw_line(SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2, SCREEN_HEIGHT - 1, COLOR_DARK_GRAY); // Y-axis
 }
