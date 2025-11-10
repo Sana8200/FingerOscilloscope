@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "queue": "c",
-        "stack": "c"
+        "stack": "c",
+        "spi_driver.h": "c",
+        "hardware.h": "c"
     }
 }
