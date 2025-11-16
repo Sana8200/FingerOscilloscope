@@ -1,70 +1,109 @@
-
-#include "vga_driver.h"
-#include "ad7705_driver.h"
-#include "hardware.h"
 #include <stdint.h>
 #include <stdbool.h>
-#include "dtekv-lib.h"
+
+#include "hardware.h"
+#include "spi_driver.h"
+#include "ad7705_driver.h"
+#include "vga_driver.h"
+#include "timer.h"
 
 
+#define SCOPE_SAMPLE_RATE_HZ 100     // Read ADC 100 times per second
 
 
 void handle_interrupt(unsigned cause) {
-
 }
 
 
 
-// This buffer stores all the y-coordinates for the waveform.
-// static uint16_t sample_buffer[SCREEN_WIDTH];
+// Buffer to store the history of ADC readings (one per screen column)
+uint8_t waveform_buffer[SCREEN_WIDTH]; 
 
+// Current drawing position on the X-axis
+int current_x = 0;
 
-// linear scale the 16-bit ADC value (0-65535) to a Y-coordinate (0-239)
-static int scale_adc_to_y(uint16_t adc_val) {
-    // 65535 (max ADC) / 239 (max Y) = ~274
-    int y = 239 - (adc_val / 274);
-
-    // in case of rounding
-    if (y < 0) y = 0;
-    if (y > 239) y = 239;
-    return y;
+// Scales 16-bit ADC value (0-65535) to Screen Y (239-0)
+// 0V input -> Bottom of screen (Y=239), Max input -> Top of screen (Y=0)
+uint8_t map_adc_to_screen_y(uint16_t adc_value) {
+    // 65535 / 240 is approx 273. 
+    // We divide by 274 to stay safely within 0-239 range.
+    uint16_t scaled = adc_value / 274;
+    
+    if (scaled > 239) scaled = 239;
+    
+    // 0 is at the bottom
+    return (uint8_t)(SCREEN_HEIGHT - 1 - scaled);
 }
 
-// Redraws the small vertical segment of the grid at column x.
-// This is used to "patch" the grid after erasing a pixel.
-static void redraw_grid_column(int x) {
-    // Check if x is on a vertical grid line
-    if ((x % (SCREEN_WIDTH / 10)) == 0) {
-        vga_draw_line(x, 0, x, SCREEN_HEIGHT - 1, COLOR_GRID_BLUE);
-    }
-    // Check if x is on the vertical axis
-    if (x == (SCREEN_WIDTH / 2)) {
-        vga_draw_line(x, 0, x, SCREEN_HEIGHT - 1, COLOR_DARK_GRAY);
-    }
-}
+
+
+
 
 
 int main() {
-    // Initialize Hardware
+
+    // Initialize SPI first so the ADC can receive commands
     spi_init();
+    
+    // Initialize ADC (Resets chip, sets up clock, performs self-calibration)
     ad7705_init();
     
-    // Clear VGA 
+    // Initialize Timer to tick 100 times per second
+    timer_init(SCOPE_SAMPLE_RATE_HZ);
+
+    //VGA Setup 
     vga_clear_screen(COLOR_BLACK);
-    vga_draw_filled_box(10, 10, 50, 50, COLOR_RED);
+    vga_draw_grid(); 
 
-    uint16_t adc_value = 0;
+    // Clear the buffer to "middle" of screen initially
+    for (int i = 0; i < SCREEN_WIDTH; i++) {
+        waveform_buffer[i] = SCREEN_HEIGHT / 2; 
+    }
 
+    // Main Loop 
     while (1) {
-        // Read ADC
-        adc_value = ad7705_read_data();
+        // Wait for Timer Tick 
+        if (timer_check_tick()) {
+            
+            // Read latest sample from AD7705, This function waits for DRDY pin to go low before reading
+            uint16_t adc_raw = ad7705_read_data();
 
-        // 3. Display on LEDs (MSB 10 bits)
-        // AD7705 is 16-bit. We shift right by 6 to fit on 10 LEDs.
-        set_leds(adc_value >> 6);
-        
-        // Simple delay so we don't flood the serial bus
-        for(volatile int i=0; i<50000; i++);
+            // This is for debugging, adc value shown on leds changing 
+            set_leds(adc_raw >> 8);
+
+            // Calculate new Y coordinate
+            uint8_t new_y = map_adc_to_screen_y(adc_raw);
+            
+            // Erase the "Old" data at current X, We draw a vertical line of background color to clear the previous trace
+            vga_draw_line(current_x, 0, current_x, SCREEN_HEIGHT-1, COLOR_BLACK);
+            
+            // Restore grid line if we erased it
+            if (current_x % 32 == 0) {
+                vga_draw_line(current_x, 0, current_x, SCREEN_HEIGHT-1, COLOR_CYAN); 
+            }
+            
+            // Draw the "New" data
+            // Connect previous point to current point for a continuous line
+            int prev_x = (current_x == 0) ? 0 : current_x - 1;
+            uint8_t prev_y = waveform_buffer[prev_x];
+
+            if (current_x == 0) {
+                // Start of screen, just draw a pixel
+                vga_draw_pixel(current_x, new_y, COLOR_GREEN);
+            } else {
+                // Draw line from previous sample to this one
+                vga_draw_line(prev_x, prev_y, current_x, new_y, COLOR_GREEN);
+            }
+            
+            // Update buffer
+            waveform_buffer[current_x] = new_y;
+
+            // Increment X and wrap around
+            current_x++;
+            if (current_x >= SCREEN_WIDTH) {
+                current_x = 0;
+            }
+        }
     }
     return 0;
 }

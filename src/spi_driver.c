@@ -79,38 +79,39 @@ void spi_wait_for_ready() {
 uint8_t spi_transfer_byte(uint8_t byte_out) {
     uint8_t byte_in = 0;
 
-    // Ensure Clock is starting HIGH (Mode 3 Idle)
+    // 1. Ensure Clock starts HIGH (Idle)
     pio_output_state |= SPI_SCK_PIN;
     *pGPIO_DATA = pio_output_state;
-    spi_delay();
 
     for (int i = 0; i < 8; i++) {
-        // Drop Clock LOW (Leading Edge)
-        pio_output_state &= ~SPI_SCK_PIN;
+        // 2. Setup MOSI (Output)
+        if (byte_out & 0x80) pio_output_state |= SPI_MOSI_PIN;
+        else                 pio_output_state &= ~SPI_MOSI_PIN;
         *pGPIO_DATA = pio_output_state;
         
-        // Setup MOSI (MSB First)
-        if (byte_out & 0x80) {
-            pio_output_state |= SPI_MOSI_PIN;
-        } else {
-            pio_output_state &= ~SPI_MOSI_PIN;
-        }
+        // 3. Leading Edge: Drop SCK LOW
+        pio_output_state &= ~SPI_SCK_PIN;
         *pGPIO_DATA = pio_output_state;
-        spi_delay(); 
+        spi_delay();
 
-        // Raise Clock HIGH (Trailing/Latching Edge)
+        // 4. Trailing Edge: Raise SCK HIGH (Sampling happens here)
         pio_output_state |= SPI_SCK_PIN;
         *pGPIO_DATA = pio_output_state;
-
-        // Read MISO
+        
+        // 5. Read MISO (Input)
         byte_in <<= 1;
         if (*pGPIO_DATA & SPI_MISO_PIN) {
             byte_in |= 1;
         }
-        spi_delay(); 
+        spi_delay();
 
-        // Shift output byte for next iteration
         byte_out <<= 1;
     }
     return byte_in;
 }
+
+
+
+
+    
+    
