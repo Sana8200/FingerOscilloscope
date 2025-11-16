@@ -2,6 +2,11 @@
 #define TIMER_H
 
 #include <stdint.h>
+#include <stdbool.h>
+// 30 MHz system clock frequency
+#define SYSTEM_CLOCK_FREQ 30000000 
+
+
 
 // --- Timer Memory-Mapped Register Pointers ---
 // Base address for the timer hardware
@@ -20,12 +25,14 @@
 
 // --- Timer Status Register Bits ---
 #define TIMER_STATUS_TO    0x1 // Bit 0: Timeout Flag (Clear this in the ISR)
-#define TIMER_STATUS_RUN   0x2 // Bit 1: Timer is running
 
 
-#endif // TIMER_H
+void timer_init(int frequency_hz);
+bool timer_check_tick();
 
 
+
+#endif /* TIMER_H */
 
 
 

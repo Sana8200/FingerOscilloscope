@@ -3,6 +3,7 @@
         "queue": "c",
         "stack": "c",
         "spi_driver.h": "c",
-        "hardware.h": "c"
+        "hardware.h": "c",
+        "stdint.h": "c"
     }
 }
