@@ -51,4 +51,8 @@ Module.symvers
 Mkfile.old
 dkms.conf
 funcitons
-.vscode
+# Ignore VS Code settings
+.vscode/
+
+# Ignore macOS Finder files
+.DS_Store
