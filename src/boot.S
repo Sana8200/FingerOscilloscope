@@ -133,7 +133,6 @@ loop:	j loop
 # enables the machine timer interrupt. It is called from C code.
 # =============================================================================
 
-
 enable_interrupt:
     # Set the MIE (Machine Interrupt Enable) bit in the mstatus register.
     # The bitmask for MIE is 0x8 (bit 3).
@@ -141,7 +140,7 @@ enable_interrupt:
 
     # Set the MTIE (Machine Timer Interrupt Enable) bit in the mie register.
     csrs mie, 16      # Machine timer interrupt enable bit is 16 
-	csrsi mie, 17      # Machine switch interrupt enable bit is 17 
+	#csrsi mie, 17      # Machine switch interrupt enable bit is 17 
 
 	# csrsi and csrs are identical        
     

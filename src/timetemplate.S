@@ -33,6 +33,7 @@
 #.endm
 #############################################################
 
+
 	.data
 	.align 2
 mytime:	.word 	0x5957
@@ -186,8 +187,6 @@ letters:
     
 
 
-
-
 # Delay function runs a busy loop to make delay in the program, inefficient way to create a delay 
 
 # a0   number of milliseconds (ms)   a0 = ms 
@@ -227,9 +226,11 @@ for_loop:                        # inner loop is the for loop's body which count
   # blt x0, a0, while loop     # bgtz is the instruction that makes the outer while loop to repeat  
 
 
+
 exit_delay:                      # Exit point for the function 
     jr ra                        # returning from a subroutine
   # ret 
+
 
 
 

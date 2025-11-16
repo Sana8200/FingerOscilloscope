@@ -96,8 +96,7 @@ int nextprime( int inval )
      if(inval == 1) return(2);  /* Easy special case. */
      if(inval == 2) return(3);  /* Easy special case. */
    }
-   else
-   {
+   else{
      /* Testing an even number for primeness is pointless, since
       * all even numbers are divisible by 2. Therefore, we make sure
       * that perhapsprime is larger than the parameter, and odd. */
