@@ -16,7 +16,7 @@ void spi_init(){
     direction &= ~(SPI_MISO_PIN | ADC_DRDY_PIN);  // MISO, DRDY as inputs
     
     *pGPIO_DIRECTION = direction;
-    pio_output_state = *pGPIO_DATA;     // Read initial state (just in case)
+    pio_output_state = *pGPIO_DATA;     // Read initial state 
     pio_output_state |= (SPI_CS_PIN | ADC_RST_PIN);     // Default state: CS high (deselcted), RST high(inactive)
 
     // Write the initial state to the hardware
@@ -104,6 +104,5 @@ uint8_t spi_transfer_byte(uint8_t byte_out) {
     }
     return byte_in;     // Return the received byte
 }
-
 
 

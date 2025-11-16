@@ -6,12 +6,13 @@
 
 
 
+
 // DE10-Lite Memory-Mapped Peripheral Base Addresses
-#define GPIO_BASE               0x040000E0
-#define PUSH_BUTTON_BASE        0x040000D0
-#define LED_BASE                0x04000000
-#define SEV_SEG_DISPLAY_BASE    0x04000050
-#define SWITCH_BASE             0x04000010
+#define GPIO_BASE                    0x040000E0
+#define PUSH_BUTTON_BASE_ADDR        0x040000D0
+#define LED_BASE_ADDR                0x04000000
+#define SEV_SEG_DISPLAY_BASE_ADDR    0x04000050
+#define SWITCH_BASE_ADDR             0x04000010
 
 
 

@@ -1,117 +1,87 @@
 #include "hardware.h"
-#include "timer.h" // Includes timer.h for register access
-#include "ad7705_driver.h" // Needed to call AdcReadSample()
+#include "timer.h" 
+#include "ad7705_driver.h" 
 #include <stdint.h>
 #include <stdbool.h>
 
-// --- Global variables for the simple clock display ---
-static int g_hours = 0;
-static int g_minutes = 0;
-static int g_seconds = 0;
-static int g_timeout_counter = 0; // Counts up to 10 for 1-second updates (100ms interval)
 
 
-/* Reads the status of the push button (1 if pressed, 0 otherwise). */
-int GetBtn(void) {
-    volatile int *button_pointer = (volatile int *)PUSH_BUTTON_BASE;
-    return (*button_pointer) & 0x01; 
+
+/*
+ * set_leds(int led_mask)
+ * Takes an integer and writes it to the LED base address to control the 10 LEDs.
+ */
+void set_leds(int led_mask){
+    volatile int * led_pointer = (volatile int *) LED_BASE_ADDR;
+    *led_pointer = led_mask;
 }
 
-/* Writes a single value (0-9) to one of the six 7-segment displays. */
-void SetDisplay(int display_number, int value) {
-    // This function implements the complex logic to map numbers (0-9) to 
-    // the correct 7-segment bit patterns (omitted for brevity).
-    // The pointer calculation and assignment is done here.
+/*
+ * get_btn reads the status of teh push button
+ */
+int get_btn(void){
+    volatile int *push_button_pointer = (volatile int *) PUSH_BUTTON_BASE_ADDR;
+    return (*push_button_pointer) & 0x01 ;    
 }
+    
 
-
-/* Sets the time across the six 7-segment displays. */
-void SetTimerDisplay(int hours, int minutes, int seconds) {
-    // Logic to set individual digits using SetDisplay()
-    // ... (omitted for brevity)
+/*
+ * int get_sw(void);
+ * Reads the status of the 10 toggle switches on the board, no parameter
+ */
+int get_sw(void){
+    volatile int *switch_pointer = (volatile int *) SWITCH_BASE_ADDR;
+    return (*switch_pointer) & 0x3FF; 
 }
 
 
 /*
- * The Interrupt Service Routine (ISR) is called by the timer (e.g., every 100ms).
- * This is where high-frequency tasks like ADC sampling occur.
+ * set_display writes a value to one of the six 7-segment displays
  */
-void HandleInterrupt(unsigned cause) {
-    // 1. Clear the Timer interrupt flag immediately
-    *TIMER_STATUS = 0; 
+void set_display( int display_number, int value){
 
-    // 2. Sample the ADC and store the data in the buffer
-    AdcReadSample(); 
+    static const int sev_seg_map[] = {       // Look up table for the numbers on the 7 segment display 
+        0x40, // 0
+        0x79, // 1
+        0x24, // 2
+        0x30, // 3
+        0x19, // 4
+        0x12, // 5
+        0x02, // 6
+        0x78, // 7
+        0x00, // 8
+        0x10, // 9
+    };
+     
+    // If the value is valid, it will look up the digit in the array to find the correct bit pattern 
+    int bit_pattern;
 
-    // 3. Simple clock update logic 
-    g_timeout_counter++;
+    if(value >= 0 && value <= 9){
+        bit_pattern = sev_seg_map[value];
+    } else {
+        // Turning off all the segments for invalid numbers 
+        // bit_pattern = 0x7F;    
 
-    if (g_timeout_counter >= 10) {
-        g_timeout_counter = 0;
-        g_seconds++;
-        
-        // Logic to update minutes/hours
-        if (g_seconds >= 60) { g_seconds = 0; g_minutes++; }
-        if (g_minutes >= 60) { g_minutes = 0; g_hours++; }
-        if (g_hours >= 24) { g_hours = 0; }
-
-        SetTimerDisplay(g_hours, g_minutes, g_seconds);
+        // for invalid numbers bigger than 9 or negative numbers show 0 on the display 
+        bit_pattern = sev_seg_map[0];            
     }
+
+
+    // Calculating the address for the specified display 
+    unsigned int displayer_address = SEV_SEG_DISPLAY_BASE_ADDR + (display_number * 0x10);
+
+    volatile int *display_pointer = (volatile int *) displayer_address;
+    *display_pointer = bit_pattern; 
 }
 
-
-/* Initializes all hardware components. */
-void LabInit(void) {
-    // 1. Set the timer period for 100ms
-    const int period_value = 3000000; 
-    *TIMER_PERIODL = period_value & 0xFFFF;
-    // Set TIMER_PERIODH here...
-
-    // 2. Start timer: Continuous mode | Start | Interrupt On
-    *TIMER_CTRL = TIMER_CTRL_CONT | TIMER_CTRL_START | TIMER_CTRL_ITO;
-    *TIMER_STATUS = 0; // Clear initial status
-
-    // 3. Initialize the ADC (sets up SPI GPIO, performs reset/calibration)
-    AdcInit();
-    
-    // 4. Enable system interrupts
-    EnableInterrupts();
+/* 
+// Simplified code code to use just a fixed displayer (0, HEX0) displayer with a fixed number 
+void sevenSegDisplay(void){
+    volatile int *segm7 = (volatile int *) 0x04000050;
+    *segm7 = 0x19;  
 }
+*/
 
 
 
-// External function for precise, processor-specific delay
-extern void delay(int cycles); 
 
-// --- System Variables ---
-// A simple millisecond counter updated by the Timer ISR
-volatile int ms_counter = 0;
-
-
-/* Software delay loop that executes a fixed number of CPU cycles. 
-   This function is typically implemented in Assembly for accuracy. */
-void delay_ms(int ms) {
-    // This is a simple approximation. For actual time-accurate delays, 
-    // you should rely on the Timer hardware.
-
-    // For simplicity, we calculate a large number of cycles to delay:
-    // This assumes a high clock frequency (e.g., 50,000 cycles is approx 1ms at 50MHz).
-    for (int i = 0; i < ms; i++) {
-        // Delay 1ms (adjust 50000 based on your actual CPU clock speed)
-        delay(50000); 
-    }
-}
-
-
-/* --- Button Handling and State Machine --- */
-
-/* Checks for button presses and updates the main application state. */
-void HandleButtonPress(void) {
-    static bool button_pressed_last = false;
-    
-    // GetBtn() returns 1 if pressed (non-zero), 0 if not (based on hardware.c)
-    bool button_current = (GetBtn() != 0); 
-    
-    // Store the current state for the next check (debounce logic)
-    button_pressed_last = button_current;
-}

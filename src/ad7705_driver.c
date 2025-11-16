@@ -53,23 +53,3 @@ uint16_t ad7705_read_data() {
     
     return data;
 }
-
-
-
-void set_gain(uint8_t gain_code) {
-    // Mask to ensure gain_code is only 3 bits (0-7)
-    uint8_t gain_setting = gain_code & 0x07; 
-
-    // 1. Configure the Setup Register and start self-calibration
-    spi_select_chip();    
-    spi_transfer_byte(REG_COMM | WRITE_SETUP_REG); // Command: "Next write is to Setup Reg"
-    
-    // Send the new gain, and also command a self-calibration
-    spi_transfer_byte(MODE_SELF_CAL | gain_setting | UNIPOLAR_MODE); 
-    
-    spi_deselect_chip();
-
-    // 2. Wait for the new calibration to finish
-    // This is critical. The ADC is busy and cannot be read.
-    spi_wait_for_ready();
-}

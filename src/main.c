@@ -4,6 +4,7 @@
 #include "hardware.h"
 #include <stdint.h>
 #include <stdbool.h>
+#include "dtekv-lib.h"
 
 
 
@@ -61,7 +62,7 @@ int main() {
     int new_y;
 
     // Use switches 0, 1, and 2 to select gain
-    uint8_t current_gain_code = *pSWITCHES & 0x7; 
+    //uint8_t current_gain_code = *pSWITCHES & 0x7; 
     
     // Buffer to store old Y-values for flicker-free erasing
     int old_y_values[SCREEN_WIDTH];
@@ -69,31 +70,22 @@ int main() {
         old_y_values[i] = SCREEN_HEIGHT / 2; // Start with a flat line
     }
 
-    // --- 3. Main Oscilloscope Loop ---
+    // Main Oscilloscope Loop 
     while(1) {
-        
-        // --- A. Check for User Input (Gain Change) ---
-        uint8_t new_gain_code = *pSWITCHES & 0x7; // Read SW[2:0]
 
-        if (new_gain_code != current_gain_code) {
-            current_gain_code = new_gain_code;
-            set_gain(current_gain_code); // Re-calibrate the ADC
-
-            // Clear screen and redraw grid after calibration
-            vga_clear_screen(COLOR_BLACK);
-            vga_draw_grid();
-            // We also need to reset the x_pos to start the new wave
-            x_pos = 0; 
-        }
-
-        // --- B. Acquire Data ---
+        // Data 
         new_adc_val = ad7705_read_data();
         new_y = scale_adc_to_y(new_adc_val);
+
+
+        print("ADC Value: ");
+        print_dec(new_adc_val);
+    
         
-        // --- C. Erase Old Pixel ---
+        // Erase Old Pixel 
         // Erase the old pixel by redrawing the background
         if ((old_y_values[x_pos] % (SCREEN_HEIGHT / 8)) == 0) {
-            vga_draw_pixel(x_pos, old_y_values[x_pos], COLOR_GRID_BLUE);
+            vga_draw_pixel(x_pos, old_y_values[x_pos], COLOR_RED);
         } else if (old_y_values[x_pos] == (SCREEN_HEIGHT / 2)) {
             vga_draw_pixel(x_pos, old_y_values[x_pos], COLOR_DARK_GRAY);
         } else {
@@ -103,19 +95,19 @@ int main() {
         // Redraw the vertical grid line that was erased
         redraw_grid_column(x_pos);
 
-        // --- D. Draw New Pixel ---
+        // Draw New Pixel 
         vga_draw_pixel(x_pos, new_y, COLOR_YELLOW);
         
-        // --- E. Update State ---
+        // Update State
         old_y_values[x_pos] = new_y; 
         
         x_pos++; // Move to the next horizontal pixel
         if (x_pos >= SCREEN_WIDTH) {
-            x_pos = 0; // Wrap around
+            x_pos = 0; 
         }
 
         // Flash the LEDs
-        *pLEDS = (current_gain_code << 4) | (x_pos >> 5); 
+       // *pLEDS = (current_gain_code << 4) | (x_pos >> 5); 
     }
     
     return 0; 
