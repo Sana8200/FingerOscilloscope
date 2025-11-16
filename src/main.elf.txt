@@ -1041,6 +1041,8 @@ Disassembly of section .text:
  ebc:	c78ff0ef          	jal	334 <vga_draw_pixel>
  ec0:	f49ff06f          	j	e08 <main+0xc4>
 
+
+
 Disassembly of section .data:
 
 00000ec4 <welcome_msg>:
