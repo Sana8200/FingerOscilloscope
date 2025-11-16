@@ -1,7 +1,6 @@
 #include "timer.h"
 
 
-
 // Initializes the hardware timer to tick at a specific frequency
 void timer_init(int target_frequency_hz) {
     // Writing to the control register. STOP bit is bit 3 (0x8).
