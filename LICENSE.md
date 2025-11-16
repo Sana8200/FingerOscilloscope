@@ -1,6 +1,6 @@
 # Proprietary License
 
-Copyright © 2025 Sana Monhaseri and Rachel Lachiani
+Copyright © 2025 Sana Monhaseri
 
 **All Rights Reserved.**
 
