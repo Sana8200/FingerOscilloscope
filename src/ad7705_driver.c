@@ -2,34 +2,36 @@
 #include "spi_driver.h"     
 #include "hardware.h"      
 
-// Initializes the AD7705 
 void ad7705_init() {
-    // 1. Hard Reset ADC
-    spi_reset_pin(false); // Pull reset pin LOW (active)
-    for(volatile int d=0; d < 100; d++); // Short delay
-    spi_reset_pin(true);  // Pull reset pin HIGH (inactive)
-    
-    // Wait for the chip to be ready (min 500ns)
+    // Hard Reset ADC
+    spi_reset_pin(false); 
+    for(volatile int d=0; d < 1000; d++); 
+    spi_reset_pin(true);  
     for(volatile int d=0; d < 1000; d++);
 
-    // 2. Configure the Clock Register
-    spi_select_chip();   
-    spi_transfer_byte(REG_COMM | WRITE_CLOCK_REG); // Command: "Next write is to Clock Reg"
+
+    spi_select_chip();
+    for(int i=0; i<5; i++) {
+        spi_transfer_byte(0xFF);
+    }
+    spi_deselect_chip();
     
-    spi_transfer_byte(CLOCK_CONFIG);      // Using 4.9152MHz clock config (0x0C)         
+
+    // Configure Clock
+    spi_select_chip();   
+    spi_transfer_byte(REG_COMM | WRITE_CLOCK_REG); 
+    spi_transfer_byte(CLOCK_CONFIG);             
     spi_deselect_chip();
 
-    // 3. Configure the Setup Register and start self-calibration
+    // Configure Setup
     spi_select_chip();    
-    spi_transfer_byte(REG_COMM | WRITE_SETUP_REG); // Command: "Next write is to Setup Reg"
+    spi_transfer_byte(REG_COMM | WRITE_SETUP_REG); 
     spi_transfer_byte(MODE_SELF_CAL | GAIN_1 | UNIPOLAR_MODE); 
     spi_deselect_chip();
 
-    // 4. Wait for the calibration to finish (~200ms)
-    // The ~DRDY pin will go LOW when calibration is done.
+    // Wait for calibration
     spi_wait_for_ready();
 }
-
 
 // Reads the 16-bit conversion result from the ADC.
 uint16_t ad7705_read_data() {

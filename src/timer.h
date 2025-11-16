@@ -20,7 +20,13 @@
 
 // --- Timer Status Register Bits ---
 #define TIMER_STATUS_TO    0x1 // Bit 0: Timeout Flag (Clear this in the ISR)
+#define TIMER_STATUS_RUN   0x2 // Bit 1: Timer is running
+
 
 #endif // TIMER_H
+
+
+
+
 
 
