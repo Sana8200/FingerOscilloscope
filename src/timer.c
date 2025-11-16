@@ -2,23 +2,19 @@
 
 
 
-
 // Initializes the hardware timer to tick at a specific frequency
 void timer_init(int target_frequency_hz) {
-    // 1. Stop the timer first to clear state
     // Writing to the control register. STOP bit is bit 3 (0x8).
     *TIMER_CTRL = TIMER_CTRL_STOP; 
     
-    // 2. Clear the Time-Out (TO) status bit
-    // Writing 0 to status clears the TO bit (based on TIMER.pdf)
+    // Clear the Time-Out (TO) status bit
     *TIMER_STATUS = 0;
 
-    // 3. Calculate the period count
-    // Formula: Clock_Freq / Target_Freq
-    // Example: 30,000,000 / 100 = 300,000 ticks for 10ms (100Hz)
+    // Calculate the period count
+    // Formula: Clock_Freq / Target_Freq (target frequency we can modify)
     int period_count = SYSTEM_CLOCK_FREQ / target_frequency_hz;
 
-    // 4. Write the period to the Low and High registers
+    // Write the period to the Low and High registers
     // The timer loads this value when it resets.
     *TIMER_PERIODL = (period_count & 0xFFFF);        // Lower 16 bits
     *TIMER_PERIODH = ((period_count >> 16) & 0xFFFF); // Upper 16 bits
@@ -31,10 +27,9 @@ void timer_init(int target_frequency_hz) {
 
 
 bool timer_check_tick() {
-    // Check bit 0 (TO - Timeout) of the status register
+    // Check bit 0 (TO - Timeout) of the status register (We need to check if timer reached 0)
     if (*TIMER_STATUS & TIMER_STATUS_TO) {
-        // The timer reached 0.
-        // Clear the interrupt/status bit by writing 0 to it.
+        // Clear the interrupt/status bit by writing 0 to it. (Writing anything clears it, so we write 0)
         *TIMER_STATUS = 0; 
         return true;
     }
