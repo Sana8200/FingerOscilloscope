@@ -6,10 +6,11 @@ static uint32_t pio_output_state;
 // Simple delay to satisfy AD7705 timing requirements ($t_{14}, t_{15} > 100ns$).
 // On a 30MHz CPU, 1 cycle is ~33ns. A loop of 10 is approx 300ns 
 static void spi_delay() {
-    for (volatile int i = 0; i < 15; i++) {
+    for (volatile int i = 0; i < 10; i++) {
         __asm("nop"); // Prevents compiler optimization
     }
 }
+
 
 
 void spi_init() {

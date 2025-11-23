@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include <stdbool.h>
-
+#include "lib.h"
 #include "hardware.h"
 #include "spi_driver.h"
 #include "ad7705_driver.h"
@@ -14,7 +14,13 @@
 void handle_interrupt(unsigned cause) {
 }
 
-
+void delay_ms(volatile uint32_t ms) {
+    ms *= SYSTEM_CLOCK_FREQ / 1000;
+    while(ms !=0) {
+        __asm("nop"); // Prevents compiler optimization
+        --ms;
+    }
+}
 
 // Buffer to store the history of ADC readings (one per screen column)
 uint8_t waveform_buffer[SCREEN_WIDTH]; 
@@ -37,19 +43,23 @@ uint8_t map_adc_to_screen_y(uint16_t adc_value) {
 
 
 
-
-
-
 int main() {
 
-    // Initialize SPI first so the ADC can receive commands
-    spi_init();
-    
-    // Initialize ADC (Resets chip, sets up clock, performs self-calibration)
-    ad7705_init();
+//    for(int i = 0; i < 10; i++) {
+//        delay_ms(1000);
+//        display_string("wait ...");
+//    }
     
     // Initialize Timer to tick 100 times per second
     timer_init(SCOPE_SAMPLE_RATE_HZ);
+
+    //delay_ms(1000);
+    // Initialize SPI first so the ADC can receive commands
+    spi_init();
+    //delay_ms(1000);
+    
+    // Initialize ADC (Resets chip, sets up clock, performs self-calibration)
+    ad7705_init(CHN_AIN1);
 
     //VGA Setup 
     vga_clear_screen(COLOR_BLACK);
@@ -63,10 +73,10 @@ int main() {
     // Main Loop 
     while (1) {
         // Wait for Timer Tick 
-        if (timer_check_tick()) {
+        //if (timer_check_tick()) {
             
             // Read latest sample from AD7705, This function waits for DRDY pin to go low before reading
-            uint16_t adc_raw = ad7705_read_data();
+            uint16_t adc_raw = ad7705_read_data(CHN_AIN1);
 
             // This is for debugging, adc value shown on leds changing 
             set_leds(adc_raw >> 8);
@@ -104,6 +114,6 @@ int main() {
                 current_x = 0;
             }
         }
-    }
+//    }
     return 0;
 }

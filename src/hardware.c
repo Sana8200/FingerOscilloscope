@@ -1,6 +1,5 @@
 #include "hardware.h"
 #include "timer.h" 
-#include "ad7705_driver.h" 
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -73,14 +72,6 @@ void set_display( int display_number, int value){
     volatile int *display_pointer = (volatile int *) displayer_address;
     *display_pointer = bit_pattern; 
 }
-
-/* 
-// Simplified code code to use just a fixed displayer (0, HEX0) displayer with a fixed number 
-void sevenSegDisplay(void){
-    volatile int *segm7 = (volatile int *) 0x04000050;
-    *segm7 = 0x19;  
-}
-*/
 
 
 

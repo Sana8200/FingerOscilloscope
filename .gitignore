@@ -60,3 +60,8 @@ funcitons
 # Ignore raw data/picture
 *.png
 *.raw
+
+# Ignore bin files
+src/*.bin
+src/*.elf
+src/*.elf.txt
