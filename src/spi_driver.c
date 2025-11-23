@@ -71,16 +71,10 @@ void spi_wait_for_ready() {
 
 
 
-// SPI Mode 3: Clock Idles High, Data sampled on Rising Edge
-// 1. SCK starts High.
-// 2. SCK goes Low (Setup data).
-// 3. Write bit to MOSI.
-// 4. SCK goes High (Sample data).
-// 5. Read bit from MISO.
 uint8_t spi_transfer_byte(uint8_t byte_out) {
     uint8_t byte_in = 0;
 
-    // 1. Ensure Clock starts HIGH (Idle)
+    // 1. Ensure Clock starts HIGH (Idle for Mode 3)
     pio_output_state |= SPI_SCK_PIN;
     *pGPIO_DATA = pio_output_state;
 
@@ -88,30 +82,29 @@ uint8_t spi_transfer_byte(uint8_t byte_out) {
         // 2. Setup MOSI (Output)
         if (byte_out & 0x80) pio_output_state |= SPI_MOSI_PIN;
         else                 pio_output_state &= ~SPI_MOSI_PIN;
-        *pGPIO_DATA = pio_output_state;
         
-        // 3. Leading Edge: Drop SCK LOW
+        // 3. Drop SCK LOW (Leading Edge - Slave puts data on MISO here)
         pio_output_state &= ~SPI_SCK_PIN;
         *pGPIO_DATA = pio_output_state;
-        spi_delay();
-
-        // 4. Trailing Edge: Raise SCK HIGH (Sampling happens here)
-        pio_output_state |= SPI_SCK_PIN;
-        *pGPIO_DATA = pio_output_state;
         
-        // 5. Read MISO (Input)
+        spi_delay(); 
+
+        // 4. Read MISO (Input) - Sample BEFORE raising the clock
         byte_in <<= 1;
         if (*pGPIO_DATA & SPI_MISO_PIN) {
             byte_in |= 1;
         }
+
+        // 5. Raise SCK HIGH (Trailing Edge - Latch data)
+        pio_output_state |= SPI_SCK_PIN;
+        *pGPIO_DATA = pio_output_state;
+        
         spi_delay();
 
         byte_out <<= 1;
     }
     return byte_in;
 }
-
-
 
 
     

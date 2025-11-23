@@ -65,7 +65,7 @@ void ad7705_init(uint8_t channel) {
     display_string("ADC initializing ...");
 
     set_next_operation(REG_CLOCK, channel, 0);
-    write_clock_register(0,CLK_DIV_1,UPDATE_RATE_25);
+    write_clock_register(0,CLK_DIV_1,UPDATE_RATE_250);
     // Configure Clock Register
     //spi_select_chip();   
 //    spi_transfer_byte(REG_COMM | WRITE_CLOCK_REG); 
