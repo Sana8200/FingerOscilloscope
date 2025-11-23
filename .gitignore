@@ -56,3 +56,7 @@ funcitons
 
 # Ignore macOS Finder files
 .DS_Store
+
+# Ignore raw data/picture
+*.png
+*.raw
