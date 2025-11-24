@@ -37,7 +37,6 @@ void vga_draw_pixel(int x, int y, uint16_t color) {
 }
 
 
-
 // Draws a line between (x1, y1) and (x2, y2) using Bresenham's algorithm.
 void vga_draw_line(int x1, int y1, int x2, int y2, uint16_t color) {
     int dx = abs(x2 - x1);

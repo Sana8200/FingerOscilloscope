@@ -64,43 +64,44 @@ void spi_reset_pin(bool high) {
 
 
 void spi_wait_for_ready() {
-    // Poll DRDY pin. Wait while it is HIGH (1).
-    // DRDY goes LOW (0) when data is available.
-    while ((*pGPIO_DATA & ADC_DRDY_PIN) != 0);
+    int timeout = 1000000;  // Adjust based on expected time
+    while (((*pGPIO_DATA & ADC_DRDY_PIN) != 0) && timeout > 0) {
+        timeout--;
+    }
+    if (timeout == 0) {
+        // Handle timeout - maybe set error flag
+    }
 }
 
 
 
 uint8_t spi_transfer_byte(uint8_t byte_out) {
     uint8_t byte_in = 0;
-
-    // 1. Ensure Clock starts HIGH (Idle for Mode 3)
-    pio_output_state |= SPI_SCK_PIN;
-    *pGPIO_DATA = pio_output_state;
-
+    
     for (int i = 0; i < 8; i++) {
-        // 2. Setup MOSI (Output)
-        if (byte_out & 0x80) pio_output_state |= SPI_MOSI_PIN;
-        else                 pio_output_state &= ~SPI_MOSI_PIN;
-        
-        // 3. Drop SCK LOW (Leading Edge - Slave puts data on MISO here)
+        // 1. Drop clock LOW 
         pio_output_state &= ~SPI_SCK_PIN;
         *pGPIO_DATA = pio_output_state;
+        spi_delay();
         
-        spi_delay(); 
-
-        // 4. Read MISO (Input) - Sample BEFORE raising the clock
+        // 2. Set MOSI data
+        if (byte_out & 0x80) {
+            pio_output_state |= SPI_MOSI_PIN;
+        } else {
+            pio_output_state &= ~SPI_MOSI_PIN;
+        }
+        *pGPIO_DATA = pio_output_state;
+        
+        // 3. Raise clock HIGH - sample MISO here (falling edge of clock)
+        pio_output_state |= SPI_SCK_PIN;
+        *pGPIO_DATA = pio_output_state;
+        
         byte_in <<= 1;
         if (*pGPIO_DATA & SPI_MISO_PIN) {
             byte_in |= 1;
         }
-
-        // 5. Raise SCK HIGH (Trailing Edge - Latch data)
-        pio_output_state |= SPI_SCK_PIN;
-        *pGPIO_DATA = pio_output_state;
-        
         spi_delay();
-
+        
         byte_out <<= 1;
     }
     return byte_in;
