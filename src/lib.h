@@ -8,8 +8,6 @@
 
 // These functions are globally visible in the assembly files 
 
-extern void print(const char*);
-extern void print_dec(unsigned int);
 extern void display_string(char*);
 extern void time2string(char*, int);
 extern void tick(int*);
