@@ -31,6 +31,8 @@ void print_dec(unsigned int x)
   } while (divident != 0);
     if (first == 0)
 	printc(48);
+
+  printc('\n');
 }
 
 void print_hex32 ( unsigned int x)
@@ -45,6 +47,7 @@ void print_hex32 ( unsigned int x)
       hd += ('A' - 10);
     printc(hd);
   }   
+  printc('\n');
 }
 
 /* function: handle_exception

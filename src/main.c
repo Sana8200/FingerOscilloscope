@@ -6,6 +6,7 @@
 #include "ad7705_driver.h"
 #include "vga_driver.h"
 #include "timer.h"
+#include "dtekv-lib.h"
 
 
 #define SCOPE_SAMPLE_RATE_HZ 100     // Read ADC 100 times per second
@@ -14,7 +15,7 @@
 void handle_interrupt(unsigned cause) {
 }
 
-void delay_ms(volatile uint32_t ms) {
+void delay_msa(volatile uint32_t ms) {
     ms *= SYSTEM_CLOCK_FREQ / 1000;
     while(ms !=0) {
         __asm("nop"); // Prevents compiler optimization
@@ -43,6 +44,7 @@ uint8_t map_adc_to_screen_y(uint16_t adc_value) {
 
 
 
+
 int main() {
 
 //    for(int i = 0; i < 10; i++) {
@@ -53,6 +55,9 @@ int main() {
     // Initialize Timer to tick 100 times per second
     timer_init(SCOPE_SAMPLE_RATE_HZ);
 
+    display_string("start...");
+//    delay_ns(10000000000);
+//    display_string("stop...");
     //delay_ms(1000);
     // Initialize SPI first so the ADC can receive commands
     spi_init();
@@ -83,6 +88,7 @@ int main() {
 
             // Calculate new Y coordinate
             uint8_t new_y = map_adc_to_screen_y(adc_raw);
+            print_dec(adc_raw);
             
             // Erase the "Old" data at current X, We draw a vertical line of background color to clear the previous trace
             vga_draw_line(current_x, 0, current_x, SCREEN_HEIGHT-1, COLOR_BLACK);
