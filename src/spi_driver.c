@@ -1,16 +1,22 @@
 #include "spi_driver.h"
 #include "hardware.h" 
+#include "dtekv-lib.h"
+#include "lib.h"
+#include "delay.h"
 
 static uint32_t pio_output_state;
 
 // Simple delay to satisfy AD7705 timing requirements ($t_{14}, t_{15} > 100ns$).
 // On a 30MHz CPU, 1 cycle is ~33ns. A loop of 10 is approx 300ns 
-static void spi_delay() {
-    for (volatile int i = 0; i < 10; i++) {
-        __asm("nop"); // Prevents compiler optimization
-    }
-}
+//static void spi_delay() {
+//    for (volatile int i = 0; i < 10; i++) {
+//        __asm("nop"); // Prevents compiler optimization
+//    }
+//}
 
+static void spi_delay() {
+    delay_ns(500);
+}
 
 
 void spi_init() {
@@ -37,6 +43,7 @@ void spi_init() {
 
 // Selects the ADC chip (pulls CS low)
 void spi_select_chip() {
+    //display_string("Select chip ...");
     pio_output_state &= ~SPI_CS_PIN; // Pull CS Low
     *pGPIO_DATA = pio_output_state;
     spi_delay(); 
@@ -45,6 +52,7 @@ void spi_select_chip() {
 
 // Deselects the ADC chip (pulls CS high)
 void spi_deselect_chip() {
+    //display_string("deselect chip ...");
     pio_output_state |= SPI_CS_PIN; // Pull CS High
     *pGPIO_DATA = pio_output_state;
     spi_delay();
@@ -78,11 +86,11 @@ void spi_wait_for_ready() {
 uint8_t spi_transfer_byte(uint8_t byte_out) {
     uint8_t byte_in = 0;
     
+    //print_hex32(byte_out);
     for (int i = 0; i < 8; i++) {
         // 1. Drop clock LOW 
         pio_output_state &= ~SPI_SCK_PIN;
-        *pGPIO_DATA = pio_output_state;
-        spi_delay();
+        //*pGPIO_DATA = pio_output_state;
         
         // 2. Set MOSI data
         if (byte_out & 0x80) {
@@ -90,19 +98,27 @@ uint8_t spi_transfer_byte(uint8_t byte_out) {
         } else {
             pio_output_state &= ~SPI_MOSI_PIN;
         }
+        byte_out <<= 1;
+
         *pGPIO_DATA = pio_output_state;
-        
-        // 3. Raise clock HIGH - sample MISO here (falling edge of clock)
-        pio_output_state |= SPI_SCK_PIN;
-        *pGPIO_DATA = pio_output_state;
-        
-        byte_in <<= 1;
+
+        spi_delay();
+
         if (*pGPIO_DATA & SPI_MISO_PIN) {
             byte_in |= 1;
         }
-        spi_delay();
+        byte_in <<= 1;
+
+        pio_output_state |= SPI_SCK_PIN ;
         
-        byte_out <<= 1;
+        spi_delay();
+
+        // 3. Raise clock HIGH - sample MISO here (falling edge of clock)
+
+        //*pGPIO_DATA = pio_output_state;
+        
+
+        
     }
     return byte_in;
 }
