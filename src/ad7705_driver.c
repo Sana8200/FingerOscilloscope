@@ -2,6 +2,7 @@
 #include "spi_driver.h"
 #include "hardware.h"
 #include "lib.h"
+#include "dtekv-lib.h"
 
 
 void set_next_operation(uint8_t reg, uint8_t channel, uint8_t readWrite);
@@ -9,14 +10,17 @@ void write_clock_register(uint8_t CLKDIS, uint8_t CLKDIV, uint8_t outputUpdateRa
 void write_setup_register(uint8_t operationMode, uint8_t gain, uint8_t unipolar, uint8_t buffered, uint8_t fsync);
 bool data_ready(uint8_t channel);
 
+static inline void write_to_reg(uint8_t d) {
+    spi_select_chip();
+    spi_transfer_byte(d);
+    spi_deselect_chip();
+}
 
 void set_next_operation(uint8_t reg, uint8_t channel, uint8_t readWrite) {
     uint8_t r = 0;
     r = reg << 4 | readWrite << 3 | channel;
 
-    spi_select_chip();
-    spi_transfer_byte(r);
-    spi_deselect_chip();
+    write_to_reg(r);
 }
 
 void write_clock_register(uint8_t CLKDIS, uint8_t CLKDIV, uint8_t outputUpdateRate) {
@@ -24,17 +28,13 @@ void write_clock_register(uint8_t CLKDIS, uint8_t CLKDIV, uint8_t outputUpdateRa
 
     r &= ~(1 << 2); // clear CLK
 
-    spi_select_chip();
-    spi_transfer_byte(r);
-    spi_deselect_chip();
+    write_to_reg(r);
 }
 
 void write_setup_register(uint8_t operationMode, uint8_t gain, uint8_t unipolar, uint8_t buffered, uint8_t fsync) {
     uint8_t r = operationMode << 6 | gain << 3 | unipolar << 2 | buffered << 1 | fsync;
 
-    spi_select_chip();
-    spi_transfer_byte(r);
-    spi_deselect_chip();
+    write_to_reg(r);
 }
 
 bool data_ready(uint8_t channel) {
@@ -43,7 +43,6 @@ bool data_ready(uint8_t channel) {
     spi_select_chip();
     uint8_t high_byte = spi_transfer_byte(0x00); // Clock out MSB
     spi_deselect_chip();
-    print_dec(high_byte);
     return (high_byte & 0x80) == 0x0;
 }
 
@@ -64,8 +63,14 @@ void ad7705_init(uint8_t channel) {
 
     display_string("ADC initializing ...");
 
-    set_next_operation(REG_CLOCK, channel, 0);
-    write_clock_register(0,CLK_DIV_1,UPDATE_RATE_250);
+    //set_next_operation(REG_CLOCK, channel, 0);
+    //write_clock_register(1,CLK_DIV_1,UPDATE_RATE_50);
+    write_to_reg(0x20);
+    write_to_reg(0x0C);
+
+    write_to_reg(0x10);
+    write_to_reg(0x40);
+
     // Configure Clock Register
     //spi_select_chip();   
 //    spi_transfer_byte(REG_COMM | WRITE_CLOCK_REG); 
@@ -78,8 +83,9 @@ void ad7705_init(uint8_t channel) {
     //spi_transfer_byte(REG_COMM | WRITE_SETUP_REG); 
     //spi_transfer_byte(MODE_SELF_CAL | GAIN_1 | UNIPOLAR_MODE); 
     //spi_deselect_chip();
-    set_next_operation(REG_SETUP, channel, 0);
-    write_setup_register(MODE_SELF_CAL, GAIN_1, BIPOLAR, 0, 0);
+
+    //set_next_operation(REG_SETUP, channel, 0);
+    //write_setup_register(MODE_SELF_CAL, GAIN_1, BIPOLAR, 0, 0);
 
     // Wait for calibration to complete (DRDY goes low when calibration is finished.)
 
@@ -96,9 +102,9 @@ uint16_t ad7705_read_data(uint8_t channel) {
     // Wait for data ready
     // spi_wait_for_ready();
 
-    display_string("ADC wait for read ...");
+    //display_string("ADC wait for read ...");
     while(!data_ready(channel)) {}; 
-    display_string("ADC data ready !"); 
+    //display_string("ADC data ready !"); 
 
     set_next_operation(REG_DATA, channel, 1);
 
