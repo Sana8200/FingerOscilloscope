@@ -17,6 +17,7 @@
 #include "timer.h"
 #include "dtekv-lib.h"
 #include "delay.h"
+#include "lib.h"
 
 // ============================================================================
 // Configuration
@@ -56,19 +57,6 @@ static void reset_statistics(void) {
 static void update_statistics(uint16_t adc_value) {
     if (adc_value < adc_min) adc_min = adc_value;
     if (adc_value > adc_max) adc_max = adc_value;
-}
-
-// Scales 16-bit ADC value (0-65535) to Screen Y (239-0)
-// 0V input -> Bottom of screen (Y=239), Max input -> Top of screen (Y=0)
-uint8_t map_adc_to_screen_y(uint16_t adc_value) {
-    // 65535 / 240 is approx 273. 
-    // We divide by 274 to stay safely within 0-239 range.
-    uint16_t scaled = adc_value / 274;
-    
-    if (scaled > 239) scaled = 239;
-    
-    // 0 is at the bottom
-    return (uint8_t)(SCREEN_HEIGHT - 1 - scaled);
 }
 
 // ============================================================================

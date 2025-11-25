@@ -55,6 +55,13 @@ void vga_draw_line(int x1, int y1, int x2, int y2, uint16_t color);
 void vga_draw_box_outline(int x, int y, int width, int height, uint16_t color);
 void vga_draw_filled_box(int x, int y, int width, int height, uint16_t color);
 
+// ============================================================================
+// Text Drawing Functions (5x7 font)
+// ============================================================================
+
+void vga_draw_char(int x, int y, char c, uint16_t color);
+void vga_draw_string(int x, int y, const char *str, uint16_t color);
+void vga_draw_int(int x, int y, int value, uint16_t color);
 
 // ============================================================================
 // Oscilloscope Display Functions
