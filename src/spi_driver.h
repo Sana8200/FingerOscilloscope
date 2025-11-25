@@ -11,5 +11,4 @@ void spi_reset_pin(bool high);
 void spi_wait_for_ready();
 uint8_t spi_transfer_byte(uint8_t byte_out);
 
-
 #endif // SPI_DRIVER_H

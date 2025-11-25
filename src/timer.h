@@ -6,8 +6,6 @@
 // 30 MHz system clock frequency
 #define SYSTEM_CLOCK_FREQ 30000000 
 
-
-
 // --- Timer Memory-Mapped Register Pointers ---
 // Base address for the timer hardware
 #define TIMER_BASE_ADDR      0x04000020
