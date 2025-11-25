@@ -32,7 +32,7 @@
 #define UPDATE_RATE_250  0x6  // 250 Hz
 #define UPDATE_RATE_500  0x7  // 500 Hz
 #define MODE_NORMAL  0x0  //normal mode
-#define MODE_SELF_CAL  0x1  //self-calibration
+//#define MODE_SELF_CAL  0x1  //self-calibration
 #define MODE_ZERO_SCALE_CAL  0x2  //zero-scale system calibration, POR 0x1F4000, set FSYNC high before calibration, FSYNC low after calibration
 #define MODE_FULL_SCALE_CAL  0x3  //full-scale system calibration, POR 0x5761AB, set FSYNC high before calibration, FSYNC low after calibration
 #define GAIN_1  0x0 

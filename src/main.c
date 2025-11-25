@@ -47,11 +47,6 @@ uint8_t map_adc_to_screen_y(uint16_t adc_value) {
 
 int main() {
 
-//    for(int i = 0; i < 10; i++) {
-//        delay_ms(1000);
-//        display_string("wait ...");
-//    }
-    
     // Initialize Timer to tick 100 times per second
     timer_init(SCOPE_SAMPLE_RATE_HZ);
 
@@ -59,11 +54,9 @@ int main() {
 //    delay_ns(10000000000);
 //    display_string("stop...");
     //delay_ms(1000);
-    // Initialize SPI first so the ADC can receive commands
     spi_init();
     //delay_ms(1000);
     
-    // Initialize ADC (Resets chip, sets up clock, performs self-calibration)
     ad7705_init(CHN_AIN1);
 
     //VGA Setup 
@@ -77,13 +70,10 @@ int main() {
 
     // Main Loop 
     while (1) {
-        // Wait for Timer Tick 
-        //if (timer_check_tick()) {
-            
-            // Read latest sample from AD7705, This function waits for DRDY pin to go low before reading
+
             uint16_t adc_raw = ad7705_read_data(CHN_AIN1);
 
-            // This is for debugging, adc value shown on leds changing 
+            // adc value shown on leds changing 
             set_leds(adc_raw >> 8);
 
             // Calculate new Y coordinate

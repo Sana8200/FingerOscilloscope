@@ -6,18 +6,9 @@
 
 static uint32_t pio_output_state;
 
-// Simple delay to satisfy AD7705 timing requirements ($t_{14}, t_{15} > 100ns$).
-// On a 30MHz CPU, 1 cycle is ~33ns. A loop of 10 is approx 300ns 
-//static void spi_delay() {
-//    for (volatile int i = 0; i < 10; i++) {
-//        __asm("nop"); // Prevents compiler optimization
-//    }
-//}
-
 static void spi_delay() {
     delay_ns(500);
 }
-
 
 void spi_init() {
     // Read current direction register
@@ -82,47 +73,36 @@ void spi_wait_for_ready() {
 }
 
 
-
 uint8_t spi_transfer_byte(uint8_t byte_out) {
     uint8_t byte_in = 0;
     
-    //print_hex32(byte_out);
     for (int i = 0; i < 8; i++) {
-        // 1. Drop clock LOW 
-        pio_output_state &= ~SPI_SCK_PIN;
-        //*pGPIO_DATA = pio_output_state;
+        // Shift input BEFORE reading new bit
+        byte_in <<= 1;
         
-        // 2. Set MOSI data
+        // Clock low - setup MOSI
+        pio_output_state &= ~SPI_SCK_PIN;
         if (byte_out & 0x80) {
-            pio_output_state |= SPI_MOSI_PIN ;
+            pio_output_state |= SPI_MOSI_PIN;
         } else {
-            pio_output_state &= ~SPI_MOSI_PIN ;
+            pio_output_state &= ~SPI_MOSI_PIN;
         }
         byte_out <<= 1;
-
         *pGPIO_DATA = pio_output_state;
-
         spi_delay();
 
+        // Clock high - sample MISO
+        pio_output_state |= SPI_SCK_PIN;
+        *pGPIO_DATA = pio_output_state;
+        spi_delay();
+        
+        // Read MISO after rising edge
         if (*pGPIO_DATA & SPI_MISO_PIN) {
             byte_in |= 1;
         }
-        byte_in <<= 1;
-
-        pio_output_state |= SPI_SCK_PIN ;
-        
-        spi_delay();
-
-        // 3. Raise clock HIGH - sample MISO here (falling edge of clock)
-
-        //*pGPIO_DATA = pio_output_state;
-        
-
-        
     }
     return byte_in;
 }
-
 
     
     

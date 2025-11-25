@@ -3,6 +3,7 @@
 #include "hardware.h"
 #include "lib.h"
 #include "dtekv-lib.h"
+#include "delay.h"
 
 
 void set_next_operation(uint8_t reg, uint8_t channel, uint8_t readWrite);
@@ -42,10 +43,10 @@ bool data_ready(uint8_t channel) {
 }
 
 void ad7705_init(uint8_t channel) {
-    spi_reset_pin(false); 
-    for(volatile int d=0; d < 10000; d++); 
-    spi_reset_pin(true);  
-    for(volatile int d=0; d < 10000; d++);
+    spi_reset_pin(false);  // Assert reset (active low)
+    delay_ms(10);          // Hold reset for 10ms
+    spi_reset_pin(true);   // Release reset
+    delay_ms(10);          // Wait for ADC to stabilize
     display_string("ADC initializing ...");
     write_to_reg(WRITE_CLOCK_REG);
     write_to_reg(CLOCK_CONFIG);
