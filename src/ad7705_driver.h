@@ -1,6 +1,4 @@
 /**
- * ad7705_driver.h - Driver for AD7705 16-bit Sigma-Delta ADC
- * 
  * The AD7705 is a 2-channel, 16-bit sigma-delta ADC with:
  * - 2 fully differential analog input channels
  * - On-chip programmable gain amplifier (1-128)

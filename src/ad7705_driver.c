@@ -1,6 +1,5 @@
 /**
- * ad7705_driver.c - Driver for AD7705 16-bit Sigma-Delta ADC
- * 
+ * ad7705_driver.c 
  * The AD7705 is a 16-bit ADC with 2 differential input channels.
  * It uses SPI Mode 3 (CPOL=1, CPHA=1) for communication.
  * 
@@ -18,9 +17,6 @@
 #include "dtekv-lib.h"
 #include "delay.h"
 
-// ============================================================================
-// Internal Helper Functions
-// ============================================================================
 
 /**
  * Write a single byte to the AD7705
@@ -41,10 +37,6 @@ static void write_byte(uint8_t data) {
  * Bit 3: R/W (0=write, 1=read)
  * Bit 2: STBY (standby mode)
  * Bit 1-0: CH1-CH0 (Channel Select)
- * 
- * @param reg: Register to access (REG_CMM, REG_SETUP, etc.)
- * @param channel: Channel (CHN_AIN1 or CHN_AIN2)
- * @param read: true for read, false for write
  */
 static void set_next_operation(uint8_t reg, uint8_t channel, bool read) {
     uint8_t comm_byte = 0;
@@ -129,9 +121,7 @@ static bool check_drdy_register(uint8_t channel) {
     return (status & 0x80) == 0;  // DRDY is bit 7, active low
 }
 
-// ============================================================================
-// Public API Functions
-// ============================================================================
+
 
 /**
  * Initialize the AD7705 ADC
@@ -142,8 +132,6 @@ static bool check_drdy_register(uint8_t channel) {
  * 3. Configure clock register
  * 4. Configure setup register and start self-calibration
  * 5. Wait for calibration to complete
- * 
- * @param channel: Channel to initialize (CHN_AIN1 or CHN_AIN2)
  */
 void ad7705_init(uint8_t channel) {
     display_string("AD7705 init start\n");
@@ -200,12 +188,9 @@ void ad7705_init(uint8_t channel) {
     display_string("AD7705 init complete\n");
 }
 
+
 /**
- * Read raw 16-bit ADC data from specified channel
- * Blocks until data is ready
- * 
- * @param channel: Channel to read (CHN_AIN1 or CHN_AIN2)
- * @return: 16-bit ADC value
+ * Read raw 16-bit ADC data from specified channel, Blocks until data is ready
  */
 uint16_t ad7705_read_data(uint8_t channel) {
     // Wait for data ready
@@ -227,10 +212,6 @@ uint16_t ad7705_read_data(uint8_t channel) {
 
 /**
  * Read ADC data with timeout (non-blocking option)
- * 
- * @param channel: Channel to read
- * @param data: Pointer to store result
- * @return: true if data read successfully, false if timeout
  */
 bool ad7705_read_data_timeout(uint8_t channel, uint16_t *data) {
     int timeout = 100000;
@@ -242,7 +223,6 @@ bool ad7705_read_data_timeout(uint8_t channel, uint16_t *data) {
         }
         timeout--;
     }
-    
     return false;
 }
 
@@ -251,9 +231,6 @@ bool ad7705_read_data_timeout(uint8_t channel, uint16_t *data) {
  * 
  * For unipolar mode: Voltage = (ADC_Value / 65535) * Vref
  * For bipolar mode:  Voltage = ((ADC_Value - 32768) / 32768) * Vref
- * 
- * @param channel: Channel (for configuration context)
- * @return: Voltage in volts
  */
 float ad7705_read_voltage(uint8_t channel) {
     uint16_t raw = ad7705_read_data(channel);
@@ -264,9 +241,6 @@ float ad7705_read_voltage(uint8_t channel) {
 
 /**
  * Check if data is ready without blocking
- * 
- * @param channel: Channel to check
- * @return: true if new data available
  */
 bool ad7705_data_ready(uint8_t channel) {
     return check_drdy_register(channel);

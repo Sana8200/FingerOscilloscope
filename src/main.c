@@ -3,19 +3,13 @@
  * 
  * Features:
  * - Real-time waveform display on VGA (320x240)
- * - Professional oscilloscope UI with header/footer
+ * - Professional HP-style oscilloscope UI
  * - Voltage measurements (current, Vpp, min, max)
  * - Scrolling waveform display
- * 
- * Hardware:
- * - DE10-Lite FPGA board with RISC-V soft processor
- * - AD7705 16-bit Sigma-Delta ADC
- * - VGA output (320x240)
  */
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "lib.h"
 #include "hardware.h"
 #include "spi_driver.h"
 #include "ad7705_driver.h"
@@ -27,116 +21,61 @@
 // ============================================================================
 // Configuration
 // ============================================================================
-#define SAMPLE_RATE_HZ      200     // ADC sample rate (match AD7705 update rate)
 #define VREF                3.3f    // Reference voltage
-
-// Display settings
-#define VOLTS_PER_DIV       0.5f    // Voltage scale: 0.5V per division
-#define TIME_PER_DIV_MS     10.0f   // Time scale: 10ms per division
+#define VOLTS_PER_DIV       0.5f    // Voltage scale
+#define TIME_PER_DIV_MS     10.0f   // Time scale
 
 // ============================================================================
 // Global State
 // ============================================================================
 
-// Waveform buffer - stores ADC values for each screen column
+// Waveform buffer
 static uint16_t waveform_buffer[SCREEN_WIDTH];
 
-// Current drawing position
+// Display position
 static int current_x = 0;
+static int grat_left, grat_right, grat_top, grat_bottom;
 
-// Statistics tracking
+// Statistics
 static uint16_t adc_min = 65535;
 static uint16_t adc_max = 0;
-static uint32_t adc_sum = 0;
-static uint32_t sample_count = 0;
-
-// Trigger detection
-static uint16_t trigger_level = 32768;  // Mid-scale default
-static uint16_t prev_sample = 32768;
-static bool triggered = false;
-
-// Zero-crossing detection for frequency measurement
-static int zero_cross_count = 0;
-static uint32_t samples_since_reset = 0;
-static float measured_frequency = 0.0f;
-
-// ============================================================================
-// Interrupt Handler (if using timer interrupts)
-// ============================================================================
-void handle_interrupt(unsigned cause) {
-    // Timer interrupt handling if needed
-}
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
 
-/**
- * Update min/max/average statistics
- */
-static void update_statistics(uint16_t adc_value) {
-    if (adc_value < adc_min) adc_min = adc_value;
-    if (adc_value > adc_max) adc_max = adc_value;
-    adc_sum += adc_value;
-    sample_count++;
-    
-    // Detect zero crossings (for frequency measurement)
-    // Using mid-scale as "zero" reference
-    samples_since_reset++;
-    if ((prev_sample < trigger_level && adc_value >= trigger_level) ||
-        (prev_sample > trigger_level && adc_value <= trigger_level)) {
-        zero_cross_count++;
-        
-        // Calculate frequency every 10 zero crossings
-        if (zero_cross_count >= 10) {
-            // frequency = (crossings / 2) / time
-            // time = samples / sample_rate
-            float time_seconds = (float)samples_since_reset / SAMPLE_RATE_HZ;
-            measured_frequency = (zero_cross_count / 2.0f) / time_seconds;
-            
-            // Reset counters
-            zero_cross_count = 0;
-            samples_since_reset = 0;
-        }
-    }
-    prev_sample = adc_value;
-}
-
-/**
- * Reset statistics for new measurement period
- */
-static void reset_statistics(void) {
-    adc_min = 65535;
-    adc_max = 0;
-    adc_sum = 0;
-    sample_count = 0;
-}
-
-/**
- * Convert ADC value to voltage
- */
 static float adc_to_voltage(uint16_t adc_value) {
     return (float)adc_value * VREF / 65535.0f;
 }
 
-/**
- * Update the display header with current measurements
- */
-static void update_display_info(uint16_t current_adc) {
-    float v_current = adc_to_voltage(current_adc);
-    float v_max = adc_to_voltage(adc_max);
-    float v_min = adc_to_voltage(adc_min);
+static void reset_statistics(void) {
+    adc_min = 65535;
+    adc_max = 0;
+}
+
+static void update_statistics(uint16_t adc_value) {
+    if (adc_value < adc_min) adc_min = adc_value;
+    if (adc_value > adc_max) adc_max = adc_value;
+}
+
+// Scales 16-bit ADC value (0-65535) to Screen Y (239-0)
+// 0V input -> Bottom of screen (Y=239), Max input -> Top of screen (Y=0)
+uint8_t map_adc_to_screen_y(uint16_t adc_value) {
+    // 65535 / 240 is approx 273. 
+    // We divide by 274 to stay safely within 0-239 range.
+    uint16_t scaled = adc_value / 274;
     
-    vga_scope_update_info(
-        1,                  // Channel 1
-        v_current,          // Current voltage
-        VOLTS_PER_DIV,      // V/div setting
-        TIME_PER_DIV_MS,    // Time/div setting
-        v_max,              // Max voltage
-        v_min               // Min voltage
-    );
+    if (scaled > 239) scaled = 239;
     
-    vga_scope_set_frequency(measured_frequency);
+    // 0 is at the bottom
+    return (uint8_t)(SCREEN_HEIGHT - 1 - scaled);
+}
+
+// ============================================================================
+// Interrupt Handler
+// ============================================================================
+void handle_interrupt(unsigned cause) {
+    // Timer interrupt if needed
 }
 
 // ============================================================================
@@ -144,116 +83,109 @@ static void update_display_info(uint16_t current_adc) {
 // ============================================================================
 
 int main(void) {
-    // ========================================================================
-    // Initialization
-    // ========================================================================
+    // Initialize hardware
+    display_string("\n=== DE10-Lite Oscilloscope ===\n\n");
     
-    display_string("\n========================================\n");
-    display_string("  DE10-Lite Oscilloscope v1.0\n");
-    display_string("========================================\n\n");
+    // Initialize peripherals
+    display_string("Init timer...\n");
+    timer_init(200);  // 200 Hz sample rate
     
-    // Initialize timer for sample timing
-    display_string("Initializing timer...\n");
-    timer_init(SAMPLE_RATE_HZ);
-    
-    // Initialize SPI
-    display_string("Initializing SPI...\n");
+    display_string("Init SPI...\n");
     spi_init();
     delay_ms(100);
     
-    // Initialize ADC
-    display_string("Initializing AD7705...\n");
+    display_string("Init AD7705...\n");
     ad7705_init(CHN_AIN1);
     delay_ms(100);
     
-    // Initialize VGA display with oscilloscope UI
-    display_string("Initializing VGA display...\n");
+    // Initialize VGA with oscilloscope display
+    display_string("Init VGA...\n");
     vga_scope_init();
     
-    // Set trigger level to mid-scale
-    vga_scope_set_trigger(trigger_level);
+    // Get graticule bounds
+    vga_get_waveform_bounds(&grat_top, &grat_bottom, &grat_left, &grat_right);
+    current_x = grat_left;
     
-    // Initialize waveform buffer to mid-scale
+    // Initialize buffer
     for (int i = 0; i < SCREEN_WIDTH; i++) {
-        waveform_buffer[i] = 32768;
+        waveform_buffer[i] = 32768;  // Mid-scale
     }
     
-    display_string("\nOscilloscope ready!\n");
-    display_string("========================================\n\n");
+    display_string("Ready!\n\n");
     
     // ========================================================================
-    // Main Loop - Real-time waveform acquisition and display
+    // Main Loop
     // ========================================================================
     
-    uint32_t frame_counter = 0;
+    uint32_t frame = 0;
     
     while (1) {
-        // Read ADC (blocking until data ready)
+        // Read ADC
         uint16_t adc_raw = ad7705_read_data(CHN_AIN1);
         
-        // Update statistics
+        // Update stats
         update_statistics(adc_raw);
         
-        // Show current value on LEDs (upper 8 bits for visual feedback)
+        // LED feedback (upper 8 bits)
         set_leds(adc_raw >> 8);
         
-        // === Waveform Display Update ===
+        // === Draw waveform ===
         
-        // Erase the old data at current X position and restore grid
+        // Erase old column and restore grid
         vga_erase_column(current_x);
         
-        // Get previous sample for line drawing
-        int prev_x = (current_x == 0) ? SCREEN_WIDTH - 1 : current_x - 1;
+        // Get previous sample
+        int prev_x = (current_x == grat_left) ? grat_right : current_x - 1;
         uint16_t prev_adc = waveform_buffer[prev_x];
         
-        // Draw waveform segment connecting to previous point
-        if (current_x > 0) {
+        // Draw segment
+        if (current_x > grat_left) {
             vga_draw_waveform_segment(prev_x, prev_adc, current_x, adc_raw, COLOR_WAVEFORM);
         } else {
-            // At start of screen, just draw a single point
+            // First point of new sweep
             int y = vga_adc_to_screen_y(adc_raw);
             vga_draw_pixel(current_x, y, COLOR_WAVEFORM);
         }
         
-        // Store current sample in buffer
+        // Store sample
         waveform_buffer[current_x] = adc_raw;
         
-        // Advance X position and wrap around
+        // Advance position
         current_x++;
-        if (current_x >= SCREEN_WIDTH) {
-            current_x = 0;
+        if (current_x > grat_right) {
+            current_x = grat_left;
             
-            // Update header info once per screen sweep
-            update_display_info(adc_raw);
+            // Update header once per sweep
+            float v_current = adc_to_voltage(adc_raw);
+            float v_max = adc_to_voltage(adc_max);
+            float v_min = adc_to_voltage(adc_min);
             
-            // Print debug info to UART
-            frame_counter++;
-            if (frame_counter % 10 == 0) {
-                print("Frame: ");
-                print_dec(frame_counter);
-                print("  ADC: ");
+            vga_scope_update_info(1, v_current, VOLTS_PER_DIV, 
+                                  TIME_PER_DIV_MS, v_max, v_min);
+            
+            // Debug output every 10 frames
+            frame++;
+            if (frame % 10 == 0) {
+                print("Frame ");
+                print_dec(frame);
+                print(" ADC:");
                 print_dec(adc_raw);
-                print("  Vpp: ");
+                print(" Vpp:");
                 print_dec(adc_max - adc_min);
                 print("\n");
             }
             
-            // Reset statistics for next sweep
             reset_statistics();
         }
         
-        // === Handle User Input ===
-        
-        // Read switches for trigger level adjustment
+        // === Handle user input ===
         int sw = get_sw();
-        if (sw != 0) {
-            // Use switches to set trigger level (scaled to 16-bit range)
-            trigger_level = (sw & 0x3FF) << 6;  // 10-bit switch -> 16-bit
-            vga_scope_set_trigger(trigger_level);
+        if (sw & 0x01) {
+            // Switch 0: Change time scale (placeholder)
         }
-        
-        // Button press could be used for run/stop
-        // if (get_btn()) { ... }
+        if (sw & 0x02) {
+            // Switch 1: Change voltage scale (placeholder)
+        }
     }
     
     return 0;
