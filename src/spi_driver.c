@@ -26,7 +26,7 @@ void spi_init() {
     // Set Directions:
     // Outputs: CS (0), SCK (1), MOSI (2), RST (5)
     // Inputs:  MISO (3), DRDY (4)
-    direction |= (SPI_CS_PIN | SPI_SCK_PIN | SPI_MOSI_PIN | ADC_RST_PIN);
+    direction |= (SPI_CS_PIN | SPI_SCK_PIN | SPI_MOSI_PIN  | ADC_RST_PIN);
     direction &= ~(SPI_MISO_PIN | ADC_DRDY_PIN);
     *pGPIO_DIRECTION = direction;
 
@@ -94,9 +94,9 @@ uint8_t spi_transfer_byte(uint8_t byte_out) {
         
         // 2. Set MOSI data
         if (byte_out & 0x80) {
-            pio_output_state |= SPI_MOSI_PIN;
+            pio_output_state |= SPI_MOSI_PIN ;
         } else {
-            pio_output_state &= ~SPI_MOSI_PIN;
+            pio_output_state &= ~SPI_MOSI_PIN ;
         }
         byte_out <<= 1;
 

@@ -17,13 +17,12 @@
 
 
 // GPIO Pin Definitions for AD7705 SPI
-#define SPI_CS_PIN        (1 << 0)
-#define SPI_SCK_PIN       (1 << 1)
-#define SPI_MOSI_PIN      (1 << 2)
-#define SPI_MISO_PIN      (1 << 3)
-#define ADC_DRDY_PIN      (1 << 4)
-#define ADC_RST_PIN       (1 << 5)
-
+#define SPI_CS_PIN        (1 << 0)  // output  GPIO_[0]
+#define SPI_SCK_PIN       (1 << 1)  // output  GPIO_[1]
+#define ADC_DRDY_PIN      (1 << 4)  // input   GPIO_[4]
+#define ADC_RST_PIN       (1 << 5)  // output  GPIO_[5]
+#define SPI_MOSI_PIN      (1 << 8)  // output  GPIO_[8]  MOSI 
+#define SPI_MISO_PIN      (1 << 9)  // input   GPIO_[9]  MISO 
 
 // Register Definitions (Pointers to Hardware)
 #define pGPIO_DATA          ((volatile uint32_t *) (GPIO_BASE + 0))
@@ -31,6 +30,7 @@
 #define pPUSH_BUTTONS       ((volatile uint32_t *) PUSH_BUTTON_BASE)
 #define pSWITCHES           ((volatile uint32_t *) SWITCH_BASE)
 #define pLEDS               ((volatile uint32_t *) LED_BASE)
+
 
 
 
