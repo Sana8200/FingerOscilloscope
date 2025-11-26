@@ -20,7 +20,6 @@
 
 /**
  * Write a single byte to the AD7705
- * Handles chip select internally
  */
 static void write_byte(uint8_t data) {
     spi_select_chip();
@@ -180,14 +179,13 @@ void ad7705_init(uint8_t channel) {
     }
     
     if (timeout == 0) {
-        display_string("  ERROR: Cal timeout!\n");
+        display_string(" ERROR: Cal timeout!\n");
     } else {
-        display_string("  Calibration done!\n");
+        display_string(" Calibration done!\n");
     }
     
     display_string("AD7705 init complete\n");
 }
-
 
 /**
  * Read raw 16-bit ADC data from specified channel, Blocks until data is ready
@@ -238,6 +236,8 @@ float ad7705_read_voltage(uint8_t channel) {
     // Unipolar mode calculation
     return (float)raw * VREF / 65535.0f;
 }
+
+
 
 /**
  * Check if data is ready without blocking

@@ -1,223 +1,174 @@
 /**
- * vga_driver.c - Professional Oscilloscope VGA Display Driver
+ * vga_driver.c - Tektronix-Style Oscilloscope VGA Display
  * 
- * Styled after classic HP oscilloscope displays:
- * - Monochrome green phosphor aesthetic
- * - 10x8 division graticule with center crosshairs
- * - Small tick marks on axes
- * - Clean dotted grid pattern
- * - Header/footer information areas
+ * Clean, professional oscilloscope display for DE10-Lite
+ * 320x240 resolution, 16-bit buffer (RGB332 in lower byte)
  * 
- * Hardware: DE10-Lite VGA, 320x240, 16-bit buffer (using RGB332 in lower 8 bits)
+ * Layout:
+ * - Top: Status bar (12px)
+ * - Center: Waveform grid (200px) 
+ * - Bottom: Channel info bar (28px)
  */
 
 #include "vga_driver.h"
 #include <stdint.h>
 
 // ============================================================================
-// Layout Constants
+// Screen Layout
 // ============================================================================
-#define HEADER_HEIGHT       16      // Top info bar
-#define FOOTER_HEIGHT       20      // Bottom menu bar  
-#define BORDER_WIDTH        1       // Border around graticule
+#define TOP_BAR_H       12
+#define BOTTOM_BAR_H    28
+#define GRID_X          0
+#define GRID_Y          TOP_BAR_H
+#define GRID_W          320
+#define GRID_H          (240 - TOP_BAR_H - BOTTOM_BAR_H)  // 200px
 
-// Graticule area (main oscilloscope display)
-#define GRAT_LEFT           1
-#define GRAT_TOP            (HEADER_HEIGHT + 1)
-#define GRAT_WIDTH          (SCREEN_WIDTH - 2)
-#define GRAT_HEIGHT         (SCREEN_HEIGHT - HEADER_HEIGHT - FOOTER_HEIGHT - 2)
-#define GRAT_RIGHT          (GRAT_LEFT + GRAT_WIDTH - 1)
-#define GRAT_BOTTOM         (GRAT_TOP + GRAT_HEIGHT - 1)
-
-// Grid divisions
-#define GRID_DIVISIONS_X    20      // Horizontal divisions
-#define GRID_DIVISIONS_Y    16       // Vertical divisions
-
-// Tick mark sizes
-#define MAJOR_TICK_SIZE     4       // Large ticks at divisions
-#define MINOR_TICK_SIZE     2       // Small ticks (5 per division)
-#define TICKS_PER_DIV       5       // Minor ticks between major divisions
+// Grid divisions: 10 horizontal, 8 vertical (standard scope)
+#define DIV_X           10
+#define DIV_Y           8
 
 // ============================================================================
-// Color Palette - Classic Green Phosphor Style
+// Colors - Tektronix Style (RGB332: RRRGGGBB)
 // ============================================================================
-// RGB332 format: RRR GGG BB
+#define C_BLACK         0x00
+#define C_DARK_BLUE     0x01    // Very dark blue background
+#define C_GRID          0x24    // Dim gray for grid
+#define C_GRID_BRIGHT   0x49    // Brighter for major lines
+#define C_YELLOW        0xFC    // Channel 1 waveform
+#define C_CYAN          0x1F    // Channel 2 waveform  
+#define C_WHITE         0xFF    // Bright text
+#define C_GRAY          0x92    // Dim text
+#define C_GREEN         0x1C    // Status indicators
+#define C_RED           0xE0    // Trigger/alerts
 
-// Primary oscilloscope colors (green phosphor theme)
-#define COLOR_BACKGROUND    0x00    // Pure black
-#define COLOR_PHOSPHOR      0x1C    // Bright green (main elements)
-#define COLOR_PHOSPHOR_DIM  0x0C    // Dim green (grid)
-#define COLOR_PHOSPHOR_VDIM 0x04    // Very dim green (minor grid dots)
-
-// Specific UI colors
-#define COLOR_GRID_LINE     0x04    // Very subtle grid
-#define COLOR_GRID_DOT      0x08    // Slightly brighter dots at intersections
-#define COLOR_AXIS          0x0C    // Center axis lines
-#define COLOR_TICK          0x1C    // Tick marks (bright)
-#define COLOR_BORDER        0x0C    // Border around graticule
-#define COLOR_TEXT          0x1C    // Text (bright green)
-#define COLOR_TEXT_DIM      0x0C    // Dimmer text
-#define COLOR_WAVEFORM      0x1C    // Waveform trace
-#define COLOR_TRIGGER       0x1C    // Trigger marker
-
-// Alternative highlight colors for selected items
-#define COLOR_HIGHLIGHT     0x3C    // Brighter green for highlights
-#define COLOR_SELECTED      0x1C    // Selected menu item
+// ============================================================================
+// 5x7 Font - Compact ASCII (32-122)
+// ============================================================================
+static const uint8_t font[91][5] = {
+    {0x00,0x00,0x00,0x00,0x00}, // 32 space
+    {0x00,0x00,0x5F,0x00,0x00}, // 33 !
+    {0x00,0x07,0x00,0x07,0x00}, // 34 "
+    {0x14,0x7F,0x14,0x7F,0x14}, // 35 #
+    {0x24,0x2A,0x7F,0x2A,0x12}, // 36 $
+    {0x23,0x13,0x08,0x64,0x62}, // 37 %
+    {0x36,0x49,0x55,0x22,0x50}, // 38 &
+    {0x00,0x05,0x03,0x00,0x00}, // 39 '
+    {0x00,0x1C,0x22,0x41,0x00}, // 40 (
+    {0x00,0x41,0x22,0x1C,0x00}, // 41 )
+    {0x14,0x08,0x3E,0x08,0x14}, // 42 *
+    {0x08,0x08,0x3E,0x08,0x08}, // 43 +
+    {0x00,0x50,0x30,0x00,0x00}, // 44 ,
+    {0x08,0x08,0x08,0x08,0x08}, // 45 -
+    {0x00,0x60,0x60,0x00,0x00}, // 46 .
+    {0x20,0x10,0x08,0x04,0x02}, // 47 /
+    {0x3E,0x51,0x49,0x45,0x3E}, // 48 0
+    {0x00,0x42,0x7F,0x40,0x00}, // 49 1
+    {0x42,0x61,0x51,0x49,0x46}, // 50 2
+    {0x21,0x41,0x45,0x4B,0x31}, // 51 3
+    {0x18,0x14,0x12,0x7F,0x10}, // 52 4
+    {0x27,0x45,0x45,0x45,0x39}, // 53 5
+    {0x3C,0x4A,0x49,0x49,0x30}, // 54 6
+    {0x01,0x71,0x09,0x05,0x03}, // 55 7
+    {0x36,0x49,0x49,0x49,0x36}, // 56 8
+    {0x06,0x49,0x49,0x29,0x1E}, // 57 9
+    {0x00,0x36,0x36,0x00,0x00}, // 58 :
+    {0x00,0x56,0x36,0x00,0x00}, // 59 ;
+    {0x08,0x14,0x22,0x41,0x00}, // 60 <
+    {0x14,0x14,0x14,0x14,0x14}, // 61 =
+    {0x00,0x41,0x22,0x14,0x08}, // 62 >
+    {0x02,0x01,0x51,0x09,0x06}, // 63 ?
+    {0x32,0x49,0x79,0x41,0x3E}, // 64 @
+    {0x7E,0x11,0x11,0x11,0x7E}, // 65 A
+    {0x7F,0x49,0x49,0x49,0x36}, // 66 B
+    {0x3E,0x41,0x41,0x41,0x22}, // 67 C
+    {0x7F,0x41,0x41,0x22,0x1C}, // 68 D
+    {0x7F,0x49,0x49,0x49,0x41}, // 69 E
+    {0x7F,0x09,0x09,0x09,0x01}, // 70 F
+    {0x3E,0x41,0x49,0x49,0x7A}, // 71 G
+    {0x7F,0x08,0x08,0x08,0x7F}, // 72 H
+    {0x00,0x41,0x7F,0x41,0x00}, // 73 I
+    {0x20,0x40,0x41,0x3F,0x01}, // 74 J
+    {0x7F,0x08,0x14,0x22,0x41}, // 75 K
+    {0x7F,0x40,0x40,0x40,0x40}, // 76 L
+    {0x7F,0x02,0x0C,0x02,0x7F}, // 77 M
+    {0x7F,0x04,0x08,0x10,0x7F}, // 78 N
+    {0x3E,0x41,0x41,0x41,0x3E}, // 79 O
+    {0x7F,0x09,0x09,0x09,0x06}, // 80 P
+    {0x3E,0x41,0x51,0x21,0x5E}, // 81 Q
+    {0x7F,0x09,0x19,0x29,0x46}, // 82 R
+    {0x46,0x49,0x49,0x49,0x31}, // 83 S
+    {0x01,0x01,0x7F,0x01,0x01}, // 84 T
+    {0x3F,0x40,0x40,0x40,0x3F}, // 85 U
+    {0x1F,0x20,0x40,0x20,0x1F}, // 86 V
+    {0x3F,0x40,0x38,0x40,0x3F}, // 87 W
+    {0x63,0x14,0x08,0x14,0x63}, // 88 X
+    {0x07,0x08,0x70,0x08,0x07}, // 89 Y
+    {0x61,0x51,0x49,0x45,0x43}, // 90 Z
+    {0x00,0x7F,0x41,0x41,0x00}, // 91 [
+    {0x02,0x04,0x08,0x10,0x20}, // 92 backslash
+    {0x00,0x41,0x41,0x7F,0x00}, // 93 ]
+    {0x04,0x02,0x01,0x02,0x04}, // 94 ^
+    {0x40,0x40,0x40,0x40,0x40}, // 95 _
+    {0x00,0x01,0x02,0x04,0x00}, // 96 `
+    {0x20,0x54,0x54,0x54,0x78}, // 97 a
+    {0x7F,0x48,0x44,0x44,0x38}, // 98 b
+    {0x38,0x44,0x44,0x44,0x20}, // 99 c
+    {0x38,0x44,0x44,0x48,0x7F}, // 100 d
+    {0x38,0x54,0x54,0x54,0x18}, // 101 e
+    {0x08,0x7E,0x09,0x01,0x02}, // 102 f
+    {0x0C,0x52,0x52,0x52,0x3E}, // 103 g
+    {0x7F,0x08,0x04,0x04,0x78}, // 104 h
+    {0x00,0x44,0x7D,0x40,0x00}, // 105 i
+    {0x20,0x40,0x44,0x3D,0x00}, // 106 j
+    {0x7F,0x10,0x28,0x44,0x00}, // 107 k
+    {0x00,0x41,0x7F,0x40,0x00}, // 108 l
+    {0x7C,0x04,0x18,0x04,0x78}, // 109 m
+    {0x7C,0x08,0x04,0x04,0x78}, // 110 n
+    {0x38,0x44,0x44,0x44,0x38}, // 111 o
+    {0x7C,0x14,0x14,0x14,0x08}, // 112 p
+    {0x08,0x14,0x14,0x18,0x7C}, // 113 q
+    {0x7C,0x08,0x04,0x04,0x08}, // 114 r
+    {0x48,0x54,0x54,0x54,0x20}, // 115 s
+    {0x04,0x3F,0x44,0x40,0x20}, // 116 t
+    {0x3C,0x40,0x40,0x20,0x7C}, // 117 u
+    {0x1C,0x20,0x40,0x20,0x1C}, // 118 v
+    {0x3C,0x40,0x30,0x40,0x3C}, // 119 w
+    {0x44,0x28,0x10,0x28,0x44}, // 120 x
+    {0x0C,0x50,0x50,0x50,0x3C}, // 121 y
+    {0x44,0x64,0x54,0x4C,0x44}, // 122 z
+};
 
 // ============================================================================
 // Oscilloscope State
 // ============================================================================
-typedef struct {
-    uint8_t  channel;           // Current channel (1 or 2)
-    float    v_per_div_ch1;     // Volts per division CH1
-    float    v_per_div_ch2;     // Volts per division CH2
-    float    time_per_div;      // Time per division (ms or us)
-    uint8_t  time_unit;         // 0=ms, 1=us
-    float    voltage;           // Current voltage reading
-    float    v_max;             // Max voltage
-    float    v_min;             // Min voltage
-    float    v_pp;              // Peak-to-peak
-    float    frequency;         // Measured frequency
-    uint8_t  coupling;          // 0=DC, 1=AC
-    uint8_t  running;           // 0=STOP, 1=RUN
-    char     mode[4];           // "XY", "YT", etc.
-} ScopeState;
-
-static ScopeState scope = {
-    .channel = 1,
-    .v_per_div_ch1 = 20.0f,     // 20.0mV
-    .v_per_div_ch2 = 5.0f,      // 5.00V
-    .time_per_div = 1.0f,
-    .time_unit = 0,
-    .voltage = 0.0f,
-    .v_max = 0.0f,
-    .v_min = 0.0f,
-    .v_pp = 0.0f,
-    .frequency = 0.0f,
-    .coupling = 0,
+static struct {
+    int running;           // 1=Run, 0=Stop
+    int triggered;         // 1=Trig'd, 0=waiting
+    float ch1_vdiv;        // V/div for CH1
+    float ch2_vdiv;        // V/div for CH2
+    float time_div;        // Time/div in ms
+    float ch1_pkpk;        // CH1 peak-to-peak
+    float ch2_pkpk;        // CH2 peak-to-peak
+    int ch1_enabled;       // CH1 on/off
+    int ch2_enabled;       // CH2 on/off
+} scope = {
     .running = 1,
-    .mode = "XY"
+    .triggered = 0,
+    .ch1_vdiv = 0.5f,
+    .ch2_vdiv = 1.0f,
+    .time_div = 5.0f,
+    .ch1_pkpk = 0.0f,
+    .ch2_pkpk = 0.0f,
+    .ch1_enabled = 1,
+    .ch2_enabled = 0
 };
 
 // ============================================================================
-// 5x7 Bitmap Font
-// Each character is 5 columns x 7 rows, stored as 5 bytes (one per column)
-// ============================================================================
-static const uint8_t font_5x7[][5] = {
-    // Space to '/' (ASCII 32-47)
-    {0x00, 0x00, 0x00, 0x00, 0x00}, // Space
-    {0x00, 0x00, 0x5F, 0x00, 0x00}, // !
-    {0x00, 0x07, 0x00, 0x07, 0x00}, // "
-    {0x14, 0x7F, 0x14, 0x7F, 0x14}, // #
-    {0x24, 0x2A, 0x7F, 0x2A, 0x12}, // $
-    {0x23, 0x13, 0x08, 0x64, 0x62}, // %
-    {0x36, 0x49, 0x55, 0x22, 0x50}, // &
-    {0x00, 0x05, 0x03, 0x00, 0x00}, // '
-    {0x00, 0x1C, 0x22, 0x41, 0x00}, // (
-    {0x00, 0x41, 0x22, 0x1C, 0x00}, // )
-    {0x14, 0x08, 0x3E, 0x08, 0x14}, // *
-    {0x08, 0x08, 0x3E, 0x08, 0x08}, // +
-    {0x00, 0x50, 0x30, 0x00, 0x00}, // ,
-    {0x08, 0x08, 0x08, 0x08, 0x08}, // -
-    {0x00, 0x60, 0x60, 0x00, 0x00}, // .
-    {0x20, 0x10, 0x08, 0x04, 0x02}, // /
-    // '0' to '9' (ASCII 48-57)
-    {0x3E, 0x51, 0x49, 0x45, 0x3E}, // 0
-    {0x00, 0x42, 0x7F, 0x40, 0x00}, // 1
-    {0x42, 0x61, 0x51, 0x49, 0x46}, // 2
-    {0x21, 0x41, 0x45, 0x4B, 0x31}, // 3
-    {0x18, 0x14, 0x12, 0x7F, 0x10}, // 4
-    {0x27, 0x45, 0x45, 0x45, 0x39}, // 5
-    {0x3C, 0x4A, 0x49, 0x49, 0x30}, // 6
-    {0x01, 0x71, 0x09, 0x05, 0x03}, // 7
-    {0x36, 0x49, 0x49, 0x49, 0x36}, // 8
-    {0x06, 0x49, 0x49, 0x29, 0x1E}, // 9
-    // ':' to '@' (ASCII 58-64)
-    {0x00, 0x36, 0x36, 0x00, 0x00}, // :
-    {0x00, 0x56, 0x36, 0x00, 0x00}, // ;
-    {0x08, 0x14, 0x22, 0x41, 0x00}, // <
-    {0x14, 0x14, 0x14, 0x14, 0x14}, // =
-    {0x00, 0x41, 0x22, 0x14, 0x08}, // >
-    {0x02, 0x01, 0x51, 0x09, 0x06}, // ?
-    {0x32, 0x49, 0x79, 0x41, 0x3E}, // @
-    // 'A' to 'Z' (ASCII 65-90)
-    {0x7E, 0x11, 0x11, 0x11, 0x7E}, // A
-    {0x7F, 0x49, 0x49, 0x49, 0x36}, // B
-    {0x3E, 0x41, 0x41, 0x41, 0x22}, // C
-    {0x7F, 0x41, 0x41, 0x22, 0x1C}, // D
-    {0x7F, 0x49, 0x49, 0x49, 0x41}, // E
-    {0x7F, 0x09, 0x09, 0x09, 0x01}, // F
-    {0x3E, 0x41, 0x49, 0x49, 0x7A}, // G
-    {0x7F, 0x08, 0x08, 0x08, 0x7F}, // H
-    {0x00, 0x41, 0x7F, 0x41, 0x00}, // I
-    {0x20, 0x40, 0x41, 0x3F, 0x01}, // J
-    {0x7F, 0x08, 0x14, 0x22, 0x41}, // K
-    {0x7F, 0x40, 0x40, 0x40, 0x40}, // L
-    {0x7F, 0x02, 0x0C, 0x02, 0x7F}, // M
-    {0x7F, 0x04, 0x08, 0x10, 0x7F}, // N
-    {0x3E, 0x41, 0x41, 0x41, 0x3E}, // O
-    {0x7F, 0x09, 0x09, 0x09, 0x06}, // P
-    {0x3E, 0x41, 0x51, 0x21, 0x5E}, // Q
-    {0x7F, 0x09, 0x19, 0x29, 0x46}, // R
-    {0x46, 0x49, 0x49, 0x49, 0x31}, // S
-    {0x01, 0x01, 0x7F, 0x01, 0x01}, // T
-    {0x3F, 0x40, 0x40, 0x40, 0x3F}, // U
-    {0x1F, 0x20, 0x40, 0x20, 0x1F}, // V
-    {0x3F, 0x40, 0x38, 0x40, 0x3F}, // W
-    {0x63, 0x14, 0x08, 0x14, 0x63}, // X
-    {0x07, 0x08, 0x70, 0x08, 0x07}, // Y
-    {0x61, 0x51, 0x49, 0x45, 0x43}, // Z
-    // '[' to '`' (ASCII 91-96)
-    {0x00, 0x7F, 0x41, 0x41, 0x00}, // [
-    {0x02, 0x04, 0x08, 0x10, 0x20}, // backslash
-    {0x00, 0x41, 0x41, 0x7F, 0x00}, // ]
-    {0x04, 0x02, 0x01, 0x02, 0x04}, // ^
-    {0x40, 0x40, 0x40, 0x40, 0x40}, // _
-    {0x00, 0x01, 0x02, 0x04, 0x00}, // `
-    // 'a' to 'z' (ASCII 97-122)
-    {0x20, 0x54, 0x54, 0x54, 0x78}, // a
-    {0x7F, 0x48, 0x44, 0x44, 0x38}, // b
-    {0x38, 0x44, 0x44, 0x44, 0x20}, // c
-    {0x38, 0x44, 0x44, 0x48, 0x7F}, // d
-    {0x38, 0x54, 0x54, 0x54, 0x18}, // e
-    {0x08, 0x7E, 0x09, 0x01, 0x02}, // f
-    {0x0C, 0x52, 0x52, 0x52, 0x3E}, // g
-    {0x7F, 0x08, 0x04, 0x04, 0x78}, // h
-    {0x00, 0x44, 0x7D, 0x40, 0x00}, // i
-    {0x20, 0x40, 0x44, 0x3D, 0x00}, // j
-    {0x7F, 0x10, 0x28, 0x44, 0x00}, // k
-    {0x00, 0x41, 0x7F, 0x40, 0x00}, // l
-    {0x7C, 0x04, 0x18, 0x04, 0x78}, // m
-    {0x7C, 0x08, 0x04, 0x04, 0x78}, // n
-    {0x38, 0x44, 0x44, 0x44, 0x38}, // o
-    {0x7C, 0x14, 0x14, 0x14, 0x08}, // p
-    {0x08, 0x14, 0x14, 0x18, 0x7C}, // q
-    {0x7C, 0x08, 0x04, 0x04, 0x08}, // r
-    {0x48, 0x54, 0x54, 0x54, 0x20}, // s
-    {0x04, 0x3F, 0x44, 0x40, 0x20}, // t
-    {0x3C, 0x40, 0x40, 0x20, 0x7C}, // u
-    {0x1C, 0x20, 0x40, 0x20, 0x1C}, // v
-    {0x3C, 0x40, 0x30, 0x40, 0x3C}, // w
-    {0x44, 0x28, 0x10, 0x28, 0x44}, // x
-    {0x0C, 0x50, 0x50, 0x50, 0x3C}, // y
-    {0x44, 0x64, 0x54, 0x4C, 0x44}, // z
-};
-
-// ============================================================================
-// Utility Functions
-// ============================================================================
-
-int abs(int n) {
-    return (n < 0) ? -n : n;
-}
-
-// ============================================================================
-// Basic Drawing Primitives
+// Basic Drawing
 // ============================================================================
 
 void vga_clear_screen(uint16_t color) {
-    int total = SCREEN_WIDTH * SCREEN_HEIGHT;
-    for (int i = 0; i < total; i++) {
+    for (int i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; i++) {
         pVGA_PIXEL_BUFFER[i] = color;
     }
 }
@@ -228,60 +179,56 @@ void vga_draw_pixel(int x, int y, uint16_t color) {
     }
 }
 
-// Fast horizontal line
-static void hline(int x1, int x2, int y, uint16_t color) {
+static void hline(int x1, int x2, int y, uint16_t c) {
     if (y < 0 || y >= SCREEN_HEIGHT) return;
     if (x1 > x2) { int t = x1; x1 = x2; x2 = t; }
     if (x1 < 0) x1 = 0;
     if (x2 >= SCREEN_WIDTH) x2 = SCREEN_WIDTH - 1;
-    
-    volatile uint16_t *p = &pVGA_PIXEL_BUFFER[y * SCREEN_WIDTH + x1];
-    for (int x = x1; x <= x2; x++) *p++ = color;
+    for (int x = x1; x <= x2; x++) {
+        pVGA_PIXEL_BUFFER[y * SCREEN_WIDTH + x] = c;
+    }
 }
 
-// Fast vertical line
-static void vline(int x, int y1, int y2, uint16_t color) {
+static void vline(int x, int y1, int y2, uint16_t c) {
     if (x < 0 || x >= SCREEN_WIDTH) return;
     if (y1 > y2) { int t = y1; y1 = y2; y2 = t; }
     if (y1 < 0) y1 = 0;
     if (y2 >= SCREEN_HEIGHT) y2 = SCREEN_HEIGHT - 1;
-    
-    volatile uint16_t *p = &pVGA_PIXEL_BUFFER[y1 * SCREEN_WIDTH + x];
     for (int y = y1; y <= y2; y++) {
-        *p = color;
-        p += SCREEN_WIDTH;
+        pVGA_PIXEL_BUFFER[y * SCREEN_WIDTH + x] = c;
     }
 }
+
+int abs(int n) { return n < 0 ? -n : n; }
 
 void vga_draw_line(int x1, int y1, int x2, int y2, uint16_t color) {
     if (y1 == y2) { hline(x1, x2, y1, color); return; }
     if (x1 == x2) { vline(x1, y1, y2, color); return; }
     
     int dx = abs(x2 - x1), dy = abs(y2 - y1);
-    int sx = (x1 < x2) ? 1 : -1;
-    int sy = (y1 < y2) ? 1 : -1;
+    int sx = x1 < x2 ? 1 : -1, sy = y1 < y2 ? 1 : -1;
     int err = dx - dy;
-
+    
     while (1) {
         vga_draw_pixel(x1, y1, color);
         if (x1 == x2 && y1 == y2) break;
         int e2 = 2 * err;
         if (e2 > -dy) { err -= dy; x1 += sx; }
-        if (e2 < dx)  { err += dx; y1 += sy; }
+        if (e2 < dx) { err += dx; y1 += sy; }
     }
 }
 
-void vga_draw_box_outline(int x, int y, int w, int h, uint16_t color) {
-    hline(x, x + w - 1, y, color);
-    hline(x, x + w - 1, y + h - 1, color);
-    vline(x, y, y + h - 1, color);
-    vline(x + w - 1, y, y + h - 1, color);
+void vga_draw_filled_box(int x, int y, int w, int h, uint16_t c) {
+    for (int row = y; row < y + h && row < SCREEN_HEIGHT; row++) {
+        if (row >= 0) hline(x, x + w - 1, row, c);
+    }
 }
 
-void vga_draw_filled_box(int x, int y, int w, int h, uint16_t color) {
-    for (int row = y; row < y + h; row++) {
-        hline(x, x + w - 1, row, color);
-    }
+void vga_draw_box_outline(int x, int y, int w, int h, uint16_t c) {
+    hline(x, x + w - 1, y, c);
+    hline(x, x + w - 1, y + h - 1, c);
+    vline(x, y, y + h - 1, c);
+    vline(x + w - 1, y, y + h - 1, c);
 }
 
 // ============================================================================
@@ -289,12 +236,10 @@ void vga_draw_filled_box(int x, int y, int w, int h, uint16_t color) {
 // ============================================================================
 
 void vga_draw_char(int x, int y, char c, uint16_t color) {
-    if (c < 32 || c > 122) c = '?';
-    int idx = c - 32;
-    const uint8_t *glyph = font_5x7[idx];
-    
+    if (c < 32 || c > 122) return;
+    const uint8_t *g = font[c - 32];
     for (int col = 0; col < 5; col++) {
-        uint8_t bits = glyph[col];
+        uint8_t bits = g[col];
         for (int row = 0; row < 7; row++) {
             if (bits & (1 << row)) {
                 vga_draw_pixel(x + col, y + row, color);
@@ -310,405 +255,311 @@ void vga_draw_string(int x, int y, const char *s, uint16_t color) {
     }
 }
 
-// Draw integer
 void vga_draw_int(int x, int y, int val, uint16_t color) {
     char buf[12];
     int i = 0, neg = 0;
-    
     if (val < 0) { neg = 1; val = -val; }
     if (val == 0) buf[i++] = '0';
     else while (val > 0) { buf[i++] = '0' + (val % 10); val /= 10; }
     if (neg) buf[i++] = '-';
-    
     while (i > 0) { vga_draw_char(x, y, buf[--i], color); x += 6; }
 }
 
-// Draw float with decimals
+// Draw float: handles 0-999 with 1-2 decimal places
 static void draw_float(int x, int y, float val, int dec, uint16_t color) {
-    char buf[16];
-    int idx = 0;
-    
-    if (val < 0) { buf[idx++] = '-'; val = -val; }
+    if (val < 0) { vga_draw_char(x, y, '-', color); x += 6; val = -val; }
     
     int ipart = (int)val;
     float fpart = val - ipart;
     
-    // Integer part (reversed)
-    char ibuf[8];
-    int ii = 0;
-    if (ipart == 0) ibuf[ii++] = '0';
-    else while (ipart > 0) { ibuf[ii++] = '0' + (ipart % 10); ipart /= 10; }
-    while (ii > 0) buf[idx++] = ibuf[--ii];
+    // Integer part
+    if (ipart == 0) {
+        vga_draw_char(x, y, '0', color);
+        x += 6;
+    } else {
+        char buf[6];
+        int i = 0;
+        while (ipart > 0) { buf[i++] = '0' + (ipart % 10); ipart /= 10; }
+        while (i > 0) { vga_draw_char(x, y, buf[--i], color); x += 6; }
+    }
     
-    // Decimal part
+    // Decimal
     if (dec > 0) {
-        buf[idx++] = '.';
+        vga_draw_char(x, y, '.', color);
+        x += 6;
         for (int d = 0; d < dec; d++) {
             fpart *= 10;
             int digit = (int)fpart;
-            buf[idx++] = '0' + digit;
+            vga_draw_char(x, y, '0' + digit, color);
+            x += 6;
             fpart -= digit;
         }
     }
-    buf[idx] = '\0';
-    vga_draw_string(x, y, buf, color);
 }
 
 // ============================================================================
-// Graticule Grid Drawing (HP oscilloscope style)
+// Grid Drawing - Clean Tektronix style
 // ============================================================================
 
 void vga_draw_grid(void) {
-    int div_w = GRAT_WIDTH / GRID_DIVISIONS_X;
-    int div_h = GRAT_HEIGHT / GRID_DIVISIONS_Y;
-    int center_x = GRAT_LEFT + GRAT_WIDTH / 2;
-    int center_y = GRAT_TOP + GRAT_HEIGHT / 2;
+    int div_w = GRID_W / DIV_X;  // 32 pixels
+    int div_h = GRID_H / DIV_Y;  // 25 pixels
+    int cx = GRID_X + GRID_W / 2;
+    int cy = GRID_Y + GRID_H / 2;
     
-    // ========================================
-    // Draw dotted grid lines at each division
-    // ========================================
-    
-    // Vertical grid lines (dotted)
-    for (int i = 0; i <= GRID_DIVISIONS_X; i++) {
-        int x = GRAT_LEFT + i * div_w;
-        if (x > GRAT_RIGHT) x = GRAT_RIGHT;
-        
-        // Skip center line (drawn separately)
-        if (i == GRID_DIVISIONS_X / 2) continue;
-        
-        // Draw dots every 4 pixels
-        for (int y = GRAT_TOP; y <= GRAT_BOTTOM; y += 4) {
-            vga_draw_pixel(x, y, COLOR_GRID_DOT);
+    // Draw dotted grid lines
+    // Vertical lines
+    for (int i = 1; i < DIV_X; i++) {
+        int x = GRID_X + i * div_w;
+        for (int y = GRID_Y; y < GRID_Y + GRID_H; y += 5) {
+            vga_draw_pixel(x, y, C_GRID);
         }
     }
     
-    // Horizontal grid lines (dotted)
-    for (int i = 0; i <= GRID_DIVISIONS_Y; i++) {
-        int y = GRAT_TOP + i * div_h;
-        if (y > GRAT_BOTTOM) y = GRAT_BOTTOM;
-        
-        // Skip center line (drawn separately)
-        if (i == GRID_DIVISIONS_Y / 2) continue;
-        
-        // Draw dots every 4 pixels
-        for (int x = GRAT_LEFT; x <= GRAT_RIGHT; x += 4) {
-            vga_draw_pixel(x, y, COLOR_GRID_DOT);
+    // Horizontal lines  
+    for (int i = 1; i < DIV_Y; i++) {
+        int y = GRID_Y + i * div_h;
+        for (int x = GRID_X; x < GRID_X + GRID_W; x += 5) {
+            vga_draw_pixel(x, y, C_GRID);
         }
     }
     
-    // ========================================
-    // Draw center crosshairs (brighter, with ticks)
-    // ========================================
-    
-    // Horizontal center line (dotted, brighter)
-    for (int x = GRAT_LEFT; x <= GRAT_RIGHT; x += 2) {
-        vga_draw_pixel(x, center_y, COLOR_AXIS);
+    // Center crosshair - denser dots
+    for (int x = GRID_X; x < GRID_X + GRID_W; x += 3) {
+        vga_draw_pixel(x, cy, C_GRID_BRIGHT);
+    }
+    for (int y = GRID_Y; y < GRID_Y + GRID_H; y += 3) {
+        vga_draw_pixel(cx, y, C_GRID_BRIGHT);
     }
     
-    // Vertical center line (dotted, brighter)
-    for (int y = GRAT_TOP; y <= GRAT_BOTTOM; y += 2) {
-        vga_draw_pixel(center_x, y, COLOR_AXIS);
-    }
-    
-    // ========================================
-    // Draw tick marks on center lines
-    // ========================================
-    
-    int minor_w = div_w / TICKS_PER_DIV;
-    int minor_h = div_h / TICKS_PER_DIV;
-    
-    // Ticks on horizontal center line
-    for (int i = 0; i <= GRID_DIVISIONS_X; i++) {
-        int x = GRAT_LEFT + i * div_w;
-        
-        // Major tick at division
-        for (int t = -MAJOR_TICK_SIZE; t <= MAJOR_TICK_SIZE; t++) {
-            vga_draw_pixel(x, center_y + t, COLOR_TICK);
-        }
-        
-        // Minor ticks between divisions
-        if (i < GRID_DIVISIONS_X) {
-            for (int m = 1; m < TICKS_PER_DIV; m++) {
-                int mx = x + m * minor_w;
-                for (int t = -MINOR_TICK_SIZE; t <= MINOR_TICK_SIZE; t++) {
-                    vga_draw_pixel(mx, center_y + t, COLOR_TICK);
-                }
+    // Tick marks on center lines
+    for (int i = 0; i <= DIV_X; i++) {
+        int x = GRID_X + i * div_w;
+        // Major tick
+        vline(x, cy - 3, cy + 3, C_GRID_BRIGHT);
+        // Minor ticks (5 per div)
+        if (i < DIV_X) {
+            int step = div_w / 5;
+            for (int m = 1; m < 5; m++) {
+                vline(x + m * step, cy - 1, cy + 1, C_GRID_BRIGHT);
             }
         }
     }
     
-    // Ticks on vertical center line
-    for (int i = 0; i <= GRID_DIVISIONS_Y; i++) {
-        int y = GRAT_TOP + i * div_h;
-        
-        // Major tick at division
-        for (int t = -MAJOR_TICK_SIZE; t <= MAJOR_TICK_SIZE; t++) {
-            vga_draw_pixel(center_x + t, y, COLOR_TICK);
-        }
-        
-        // Minor ticks between divisions
-        if (i < GRID_DIVISIONS_Y) {
-            for (int m = 1; m < TICKS_PER_DIV; m++) {
-                int my = y + m * minor_h;
-                for (int t = -MINOR_TICK_SIZE; t <= MINOR_TICK_SIZE; t++) {
-                    vga_draw_pixel(center_x + t, my, COLOR_TICK);
-                }
+    for (int i = 0; i <= DIV_Y; i++) {
+        int y = GRID_Y + i * div_h;
+        hline(cx - 3, cx + 3, y, C_GRID_BRIGHT);
+        if (i < DIV_Y) {
+            int step = div_h / 5;
+            for (int m = 1; m < 5; m++) {
+                hline(cx - 1, cx + 1, y + m * step, C_GRID_BRIGHT);
             }
         }
     }
     
-    // ========================================
-    // Draw center dot (crosshair intersection)
-    // ========================================
-    for (int dx = -2; dx <= 2; dx++) {
-        for (int dy = -2; dy <= 2; dy++) {
-            if (abs(dx) + abs(dy) <= 3) {
-                vga_draw_pixel(center_x + dx, center_y + dy, COLOR_TEXT);
-            }
-        }
-    }
-    
-    // ========================================
-    // Draw border around graticule
-    // ========================================
-    vga_draw_box_outline(GRAT_LEFT - 1, GRAT_TOP - 1, 
-                         GRAT_WIDTH + 2, GRAT_HEIGHT + 2, COLOR_BORDER);
+    // Border
+    vga_draw_box_outline(GRID_X, GRID_Y, GRID_W, GRID_H, C_GRID_BRIGHT);
 }
 
 // ============================================================================
-// Header Drawing (Channel info, like "1 ╔20.0mV  2 ╔5.00V")
+// Header Bar (Top)
 // ============================================================================
 
 void vga_draw_header(void) {
-    // Clear header area
-    vga_draw_filled_box(0, 0, SCREEN_WIDTH, HEADER_HEIGHT, COLOR_BACKGROUND);
+    // Clear header
+    vga_draw_filled_box(0, 0, SCREEN_WIDTH, TOP_BAR_H, C_BLACK);
     
-    // Channel 1 info: "1 ╔20.0mV"
-    vga_draw_char(4, 4, '1', COLOR_TEXT);
+    // "Tek" logo style
+    vga_draw_string(4, 2, "Tek", C_WHITE);
     
-    // Small channel indicator box
-    vga_draw_filled_box(12, 4, 8, 7, COLOR_TEXT);
-    vga_draw_char(13, 4, 'V', COLOR_BACKGROUND);
-    
-    // Voltage per div
-    draw_float(24, 4, scope.v_per_div_ch1, 1, COLOR_TEXT);
-    vga_draw_string(60, 4, "mV", COLOR_TEXT_DIM);
-    
-    // Channel 2 info: "2 ╔5.00V"
-    vga_draw_char(90, 4, '2', COLOR_TEXT);
-    vga_draw_filled_box(98, 4, 8, 7, COLOR_TEXT);
-    vga_draw_char(99, 4, 'V', COLOR_BACKGROUND);
-    draw_float(110, 4, scope.v_per_div_ch2, 2, COLOR_TEXT);
-    vga_draw_string(146, 4, "V", COLOR_TEXT_DIM);
-    
-    // Mode indicator (XY, YT, etc.) - center
-    vga_draw_string(155, 4, scope.mode, COLOR_TEXT);
-    
-    // RUN/STOP indicator - right side
+    // Run/Stop status
     if (scope.running) {
-        vga_draw_string(290, 4, "RUN", COLOR_TEXT);
+        vga_draw_string(30, 2, "Run", C_GREEN);
     } else {
-        vga_draw_string(285, 4, "STOP", COLOR_TEXT);
+        vga_draw_string(30, 2, "Stop", C_RED);
     }
+    
+    // Trigger status
+    if (scope.triggered) {
+        vga_draw_string(240, 2, "Trig'd", C_GREEN);
+    } else {
+        vga_draw_string(240, 2, "Ready", C_GRAY);
+    }
+    
+    // Separator line
+    hline(0, SCREEN_WIDTH - 1, TOP_BAR_H - 1, C_GRID);
 }
 
 // ============================================================================
-// Footer Drawing (Menu items like HP scope)
+// Footer Bar (Bottom) - Channel info like Tek scope
 // ============================================================================
 
 void vga_draw_footer(void) {
-    int y = SCREEN_HEIGHT - FOOTER_HEIGHT;
+    int y = SCREEN_HEIGHT - BOTTOM_BAR_H;
     
-    // Clear footer area
-    vga_draw_filled_box(0, y, SCREEN_WIDTH, FOOTER_HEIGHT, COLOR_BACKGROUND);
+    // Clear footer
+    vga_draw_filled_box(0, y, SCREEN_WIDTH, BOTTOM_BAR_H, C_BLACK);
     
-    // Draw separator line
-    hline(0, SCREEN_WIDTH - 1, y, COLOR_BORDER);
+    // Separator line
+    hline(0, SCREEN_WIDTH - 1, y, C_GRID);
     
-    // Menu items (HP scope style)
-    // Each item has label on top, value below (highlighted if selected)
+    // Row 1: Channel settings
+    int row1 = y + 4;
     
-    int text_y1 = y + 3;
-    int text_y2 = y + 11;
+    // CH1 indicator and V/div
+    vga_draw_string(4, row1, "Ch1", C_YELLOW);
+    draw_float(30, row1, scope.ch1_vdiv, 2, C_YELLOW);
+    vga_draw_string(66, row1, "V", C_YELLOW);
     
-    // Item 1: Connect to
-    vga_draw_string(4, text_y1, "Connect to", COLOR_TEXT_DIM);
-    vga_draw_string(4, text_y2, "HP Plot", COLOR_TEXT);
+    // CH2 indicator and V/div  
+    vga_draw_string(90, row1, "Ch2", C_CYAN);
+    draw_float(116, row1, scope.ch2_vdiv, 2, C_CYAN);
+    vga_draw_string(152, row1, "V", C_CYAN);
     
-    // Item 2: Factors
-    vga_draw_string(60, text_y1, "Factors", COLOR_TEXT_DIM);
-    vga_draw_string(60, text_y2, "Off", COLOR_TEXT_DIM);
-    vga_draw_string(78, text_y2, "On", COLOR_TEXT);
+    // Time/div
+    vga_draw_string(175, row1, "M", C_WHITE);
+    draw_float(188, row1, scope.time_div, 1, C_WHITE);
+    vga_draw_string(224, row1, "ms", C_WHITE);
     
-    // Item 3: Resolution
-    vga_draw_string(115, text_y1, "Resolution", COLOR_TEXT_DIM);
-    vga_draw_string(115, text_y2, "Low", COLOR_TEXT_DIM);
-    vga_draw_string(139, text_y2, "High", COLOR_TEXT);
+    // Row 2: Measurements
+    int row2 = y + 15;
     
-    // Item 4: Baud Rate
-    vga_draw_string(175, text_y1, "Baud Rate", COLOR_TEXT_DIM);
-    vga_draw_string(175, text_y2, "19200", COLOR_TEXT);
+    // CH1 Pk-Pk
+    vga_draw_string(4, row2, "Pk:", C_GRAY);
+    draw_float(28, row2, scope.ch1_pkpk, 2, C_YELLOW);
+    vga_draw_string(70, row2, "V", C_YELLOW);
     
-    // Item 5: Handshake
-    vga_draw_string(225, text_y1, "Handshake", COLOR_TEXT_DIM);
-    vga_draw_string(225, text_y2, "XON", COLOR_TEXT);
-    vga_draw_string(249, text_y2, "DTR", COLOR_TEXT_DIM);
+    // CH2 Pk-Pk
+    if (scope.ch2_enabled) {
+        vga_draw_string(90, row2, "Pk:", C_GRAY);
+        draw_float(114, row2, scope.ch2_pkpk, 2, C_CYAN);
+        vga_draw_string(156, row2, "V", C_CYAN);
+    }
     
-    // Item 6: Previous Menu
-    vga_draw_string(280, text_y1, "Previous", COLOR_TEXT_DIM);
-    vga_draw_string(280, text_y2, "Menu", COLOR_TEXT);
+    // DC coupling indicator
+    vga_draw_string(260, row1, "DC", C_WHITE);
+    
+    // AD7705 indicator
+    vga_draw_string(260, row2, "16bit", C_GRAY);
 }
 
 // ============================================================================
 // Waveform Drawing
 // ============================================================================
 
-// Clear only the graticule area (preserve header/footer)
 void vga_clear_waveform_area(void) {
-    vga_draw_filled_box(GRAT_LEFT, GRAT_TOP, GRAT_WIDTH, GRAT_HEIGHT, COLOR_BACKGROUND);
+    vga_draw_filled_box(GRID_X + 1, GRID_Y + 1, GRID_W - 2, GRID_H - 2, C_BLACK);
 }
 
-// Draw waveform segment between two ADC samples
 void vga_draw_waveform_segment(int x1, uint16_t y1_adc, int x2, uint16_t y2_adc, uint16_t color) {
-    // Convert ADC values (0-65535) to screen Y coordinates
-    int screen_y1 = GRAT_BOTTOM - ((y1_adc * GRAT_HEIGHT) >> 16);
-    int screen_y2 = GRAT_BOTTOM - ((y2_adc * GRAT_HEIGHT) >> 16);
+    // Map ADC (0-65535) to screen Y
+    int sy1 = GRID_Y + GRID_H - 1 - (int)((uint32_t)y1_adc * (GRID_H - 2) / 65535);
+    int sy2 = GRID_Y + GRID_H - 1 - (int)((uint32_t)y2_adc * (GRID_H - 2) / 65535);
     
-    // Clamp to graticule area
-    if (screen_y1 < GRAT_TOP) screen_y1 = GRAT_TOP;
-    if (screen_y1 > GRAT_BOTTOM) screen_y1 = GRAT_BOTTOM;
-    if (screen_y2 < GRAT_TOP) screen_y2 = GRAT_TOP;
-    if (screen_y2 > GRAT_BOTTOM) screen_y2 = GRAT_BOTTOM;
+    // Clamp
+    if (sy1 < GRID_Y + 1) sy1 = GRID_Y + 1;
+    if (sy1 > GRID_Y + GRID_H - 2) sy1 = GRID_Y + GRID_H - 2;
+    if (sy2 < GRID_Y + 1) sy2 = GRID_Y + 1;
+    if (sy2 > GRID_Y + GRID_H - 2) sy2 = GRID_Y + GRID_H - 2;
     
-    vga_draw_line(x1, screen_y1, x2, screen_y2, color);
+    vga_draw_line(x1, sy1, x2, sy2, color);
 }
 
-// Erase column and restore grid at that position
 void vga_erase_column(int x) {
-    if (x < GRAT_LEFT || x > GRAT_RIGHT) return;
+    if (x < GRID_X + 1 || x > GRID_X + GRID_W - 2) return;
     
-    // Clear the column
-    vline(x, GRAT_TOP, GRAT_BOTTOM, COLOR_BACKGROUND);
+    // Clear column
+    vline(x, GRID_Y + 1, GRID_Y + GRID_H - 2, C_BLACK);
     
-    int div_w = GRAT_WIDTH / GRID_DIVISIONS_X;
-    int div_h = GRAT_HEIGHT / GRID_DIVISIONS_Y;
-    int center_x = GRAT_LEFT + GRAT_WIDTH / 2;
-    int center_y = GRAT_TOP + GRAT_HEIGHT / 2;
-    int minor_w = div_w / TICKS_PER_DIV;
+    // Restore grid
+    int div_w = GRID_W / DIV_X;
+    int div_h = GRID_H / DIV_Y;
+    int cx = GRID_X + GRID_W / 2;
+    int cy = GRID_Y + GRID_H / 2;
+    int col = x - GRID_X;
     
-    // Restore grid dots on this column
-    int col_in_grat = x - GRAT_LEFT;
-    
-    // Check if on a major division line
-    if (col_in_grat % div_w == 0) {
-        if (x != center_x) {
-            // Dotted vertical line
-            for (int y = GRAT_TOP; y <= GRAT_BOTTOM; y += 4) {
-                vga_draw_pixel(x, y, COLOR_GRID_DOT);
-            }
+    // Vertical grid line?
+    if (col > 0 && col % div_w == 0 && x != cx) {
+        for (int y = GRID_Y; y < GRID_Y + GRID_H; y += 5) {
+            vga_draw_pixel(x, y, C_GRID);
         }
     }
     
-    // Restore horizontal grid dots that intersect this column
-    for (int i = 0; i <= GRID_DIVISIONS_Y; i++) {
-        int y = GRAT_TOP + i * div_h;
-        if (i != GRID_DIVISIONS_Y / 2) {
-            // Check if this x should have a dot (every 4 pixels)
-            if ((x - GRAT_LEFT) % 4 == 0) {
-                vga_draw_pixel(x, y, COLOR_GRID_DOT);
-            }
+    // Horizontal grid lines
+    for (int i = 1; i < DIV_Y; i++) {
+        int gy = GRID_Y + i * div_h;
+        if ((x - GRID_X) % 5 == 0) {
+            vga_draw_pixel(x, gy, C_GRID);
         }
     }
     
-    // Restore center axis at this x
-    if ((x - GRAT_LEFT) % 2 == 0) {
-        vga_draw_pixel(x, center_y, COLOR_AXIS);
+    // Center horizontal line
+    if ((x - GRID_X) % 3 == 0) {
+        vga_draw_pixel(x, cy, C_GRID_BRIGHT);
     }
     
-    // Restore vertical center line dots if on center column
-    if (x == center_x) {
-        for (int y = GRAT_TOP; y <= GRAT_BOTTOM; y += 2) {
-            vga_draw_pixel(x, y, COLOR_AXIS);
-        }
-        
-        // Restore ticks on vertical center line
-        for (int i = 0; i <= GRID_DIVISIONS_Y; i++) {
-            int y = GRAT_TOP + i * div_h;
-            for (int t = -MAJOR_TICK_SIZE; t <= MAJOR_TICK_SIZE; t++) {
-                if (x + t >= GRAT_LEFT && x + t <= GRAT_RIGHT) {
-                    vga_draw_pixel(x + t, y, COLOR_TICK);
-                }
-            }
+    // Center vertical line
+    if (x == cx) {
+        for (int y = GRID_Y; y < GRID_Y + GRID_H; y += 3) {
+            vga_draw_pixel(x, y, C_GRID_BRIGHT);
         }
     }
     
-    // Restore ticks on horizontal center line
-    // Major tick check
-    if (col_in_grat % div_w == 0) {
-        for (int t = -MAJOR_TICK_SIZE; t <= MAJOR_TICK_SIZE; t++) {
-            vga_draw_pixel(x, center_y + t, COLOR_TICK);
-        }
-    }
-    // Minor tick check
-    else if (col_in_grat % minor_w == 0) {
-        for (int t = -MINOR_TICK_SIZE; t <= MINOR_TICK_SIZE; t++) {
-            vga_draw_pixel(x, center_y + t, COLOR_TICK);
-        }
+    // Ticks on center line
+    int minor = div_w / 5;
+    if (col % div_w == 0) {
+        vline(x, cy - 3, cy + 3, C_GRID_BRIGHT);
+    } else if (col % minor == 0) {
+        vline(x, cy - 1, cy + 1, C_GRID_BRIGHT);
     }
 }
 
-// Convert ADC value to screen Y coordinate
 int vga_adc_to_screen_y(uint16_t adc_value) {
-    int y = GRAT_BOTTOM - ((adc_value * GRAT_HEIGHT) >> 16);
-    if (y < GRAT_TOP) y = GRAT_TOP;
-    if (y > GRAT_BOTTOM) y = GRAT_BOTTOM;
+    int y = GRID_Y + GRID_H - 1 - (int)((uint32_t)adc_value * (GRID_H - 2) / 65535);
+    if (y < GRID_Y + 1) y = GRID_Y + 1;
+    if (y > GRID_Y + GRID_H - 2) y = GRID_Y + GRID_H - 2;
     return y;
 }
 
-// Get graticule bounds
 void vga_get_waveform_bounds(int *top, int *bottom, int *left, int *right) {
-    if (top) *top = GRAT_TOP;
-    if (bottom) *bottom = GRAT_BOTTOM;
-    if (left) *left = GRAT_LEFT;
-    if (right) *right = GRAT_RIGHT;
+    if (top) *top = GRID_Y + 1;
+    if (bottom) *bottom = GRID_Y + GRID_H - 2;
+    if (left) *left = GRID_X + 1;
+    if (right) *right = GRID_X + GRID_W - 2;
 }
 
 // ============================================================================
-// High-Level Functions
+// High-Level API
 // ============================================================================
 
-// Initialize complete oscilloscope display
 void vga_scope_init(void) {
-    vga_clear_screen(COLOR_BACKGROUND);
+    vga_clear_screen(C_BLACK);
     vga_draw_header();
     vga_draw_grid();
     vga_draw_footer();
 }
 
-// Update scope state and redraw header
 void vga_scope_update_info(uint8_t channel, float voltage, float v_per_div,
                            float time_per_div, float v_max, float v_min) {
-    scope.channel = channel;
-    scope.voltage = voltage;
     if (channel == 1) {
-        scope.v_per_div_ch1 = v_per_div;
+        scope.ch1_vdiv = v_per_div;
+        scope.ch1_pkpk = v_max - v_min;
     } else {
-        scope.v_per_div_ch2 = v_per_div;
+        scope.ch2_vdiv = v_per_div;
+        scope.ch2_pkpk = v_max - v_min;
     }
-    scope.time_per_div = time_per_div;
-    scope.v_max = v_max;
-    scope.v_min = v_min;
-    scope.v_pp = v_max - v_min;
+    scope.time_div = time_per_div;
     
-    vga_draw_header();
+    // Redraw footer with new values
+    vga_draw_footer();
 }
 
 void vga_scope_set_trigger(uint16_t level) {
-    // Could draw trigger marker on screen
+    scope.triggered = 1;
 }
 
 void vga_scope_set_frequency(float freq) {
-    scope.frequency = freq;
+    // Could display frequency
 }
 
 void vga_scope_set_running(uint8_t running) {
@@ -716,10 +567,7 @@ void vga_scope_set_running(uint8_t running) {
     vga_draw_header();
 }
 
-void vga_scope_set_mode(const char *mode) {
-    scope.mode[0] = mode[0];
-    scope.mode[1] = mode[1];
-    scope.mode[2] = mode[2] ? mode[2] : '\0';
-    scope.mode[3] = '\0';
-    vga_draw_header();
+void vga_scope_set_channel(int ch, int enabled) {
+    if (ch == 1) scope.ch1_enabled = enabled;
+    else scope.ch2_enabled = enabled;
 }

@@ -1,9 +1,4 @@
-/* lib.h
- * This header file declares all functions written before for the utilities 
- */
-
- 
-#ifndef LIB_H
+ #ifndef LIB_H
 #define LIB_H
 
 // These functions are globally visible in the assembly files 

@@ -74,7 +74,6 @@ void spi_deselect_chip(void) {
 
 /**
  * Control the ADC hardware reset pin
- * @param high: true = release reset, false = assert reset (active low)
  */
 void spi_reset_pin(bool high) {
     if (high) {
@@ -87,7 +86,6 @@ void spi_reset_pin(bool high) {
 
 /**
  * Wait for DRDY pin to go low (data ready)
- * @return true if ready, false if timeout
  */
 bool spi_wait_for_ready(void) {
     int timeout = 1000000;
@@ -103,12 +101,14 @@ bool spi_wait_for_ready(void) {
     return false;
 }
 
+
 /**
  * Check if DRDY is asserted (low)
  */
 bool spi_is_ready(void) {
     return (*pGPIO_DATA & ADC_DRDY_PIN) == 0;
 }
+
 
 /**
  * Transfer one byte over SPI (Mode 3)
@@ -117,9 +117,6 @@ bool spi_is_ready(void) {
  * 1. Clock starts high (CPOL=1)
  * 2. On falling edge: shift out MOSI data
  * 3. On rising edge: sample MISO data (CPHA=1)
- * 
- * @param byte_out: byte to transmit
- * @return: byte received
  */
 uint8_t spi_transfer_byte(uint8_t byte_out) {
     uint8_t byte_in = 0;

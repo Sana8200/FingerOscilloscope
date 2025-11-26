@@ -19,16 +19,10 @@
 #include "delay.h"
 #include "lib.h"
 
-// ============================================================================
-// Configuration
-// ============================================================================
 #define VREF                3.3f    // Reference voltage
 #define VOLTS_PER_DIV       0.5f    // Voltage scale
 #define TIME_PER_DIV_MS     10.0f   // Time scale
 
-// ============================================================================
-// Global State
-// ============================================================================
 
 // Waveform buffer
 static uint16_t waveform_buffer[SCREEN_WIDTH];
