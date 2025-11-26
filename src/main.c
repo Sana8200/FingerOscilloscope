@@ -122,11 +122,11 @@ int main(void) {
         
         // Draw segment
         if (current_x > grat_left) {
-            vga_draw_waveform_segment(prev_x, prev_adc, current_x, adc_raw, COLOR_WAVEFORM);
+            vga_draw_waveform_segment(prev_x, prev_adc, current_x, adc_raw, COLOR_GREEN);
         } else {
             // First point of new sweep
             int y = vga_adc_to_screen_y(adc_raw);
-            vga_draw_pixel(current_x, y, COLOR_WAVEFORM);
+            vga_draw_pixel(current_x, y, COLOR_GREEN);
         }
         
         // Store sample
