@@ -27,19 +27,7 @@
 #define DIV_X           10
 #define DIV_Y           8
 
-// ============================================================================
-// Colors - Tektronix Style (RGB332: RRRGGGBB)
-// ============================================================================
-#define C_BLACK         0x00
-#define C_DARK_BLUE     0x01    // Very dark blue background
-#define C_GRID          0x24    // Dim gray for grid
-#define C_GRID_BRIGHT   0x49    // Brighter for major lines
-#define C_YELLOW        0xFC    // Channel 1 waveform
-#define C_CYAN          0x1F    // Channel 2 waveform  
-#define C_WHITE         0xFF    // Bright text
-#define C_GRAY          0x92    // Dim text
-#define C_GREEN         0x1C    // Status indicators
-#define C_RED           0xE0    // Trigger/alerts
+
 
 // ============================================================================
 // 5x7 Font - Compact ASCII (32-122)
@@ -312,7 +300,7 @@ void vga_draw_grid(void) {
     for (int i = 1; i < DIV_X; i++) {
         int x = GRID_X + i * div_w;
         for (int y = GRID_Y; y < GRID_Y + GRID_H; y += 5) {
-            vga_draw_pixel(x, y, C_GRID);
+            vga_draw_pixel(x, y, COLOR_GRID);
         }
     }
     
@@ -320,45 +308,45 @@ void vga_draw_grid(void) {
     for (int i = 1; i < DIV_Y; i++) {
         int y = GRID_Y + i * div_h;
         for (int x = GRID_X; x < GRID_X + GRID_W; x += 5) {
-            vga_draw_pixel(x, y, C_GRID);
+            vga_draw_pixel(x, y, COLOR_GRID);
         }
     }
     
     // Center crosshair - denser dots
     for (int x = GRID_X; x < GRID_X + GRID_W; x += 3) {
-        vga_draw_pixel(x, cy, C_GRID_BRIGHT);
+        vga_draw_pixel(x, cy, COLOR_GRID_BRIGHT);
     }
     for (int y = GRID_Y; y < GRID_Y + GRID_H; y += 3) {
-        vga_draw_pixel(cx, y, C_GRID_BRIGHT);
+        vga_draw_pixel(cx, y, COLOR_GRID_BRIGHT);
     }
     
     // Tick marks on center lines
     for (int i = 0; i <= DIV_X; i++) {
         int x = GRID_X + i * div_w;
         // Major tick
-        vline(x, cy - 3, cy + 3, C_GRID_BRIGHT);
+        vline(x, cy - 3, cy + 3, COLOR_GRID_BRIGHT);
         // Minor ticks (5 per div)
         if (i < DIV_X) {
             int step = div_w / 5;
             for (int m = 1; m < 5; m++) {
-                vline(x + m * step, cy - 1, cy + 1, C_GRID_BRIGHT);
+                vline(x + m * step, cy - 1, cy + 1, COLOR_GRID_BRIGHT);
             }
         }
     }
     
     for (int i = 0; i <= DIV_Y; i++) {
         int y = GRID_Y + i * div_h;
-        hline(cx - 3, cx + 3, y, C_GRID_BRIGHT);
+        hline(cx - 3, cx + 3, y, COLOR_GRID_BRIGHT);
         if (i < DIV_Y) {
             int step = div_h / 5;
             for (int m = 1; m < 5; m++) {
-                hline(cx - 1, cx + 1, y + m * step, C_GRID_BRIGHT);
+                hline(cx - 1, cx + 1, y + m * step, COLOR_GRID_BRIGHT);
             }
         }
     }
     
     // Border
-    vga_draw_box_outline(GRID_X, GRID_Y, GRID_W, GRID_H, C_GRID_BRIGHT);
+    vga_draw_box_outline(GRID_X, GRID_Y, GRID_W, GRID_H, COLOR_GRID_BRIGHT);
 }
 
 // ============================================================================
@@ -367,27 +355,27 @@ void vga_draw_grid(void) {
 
 void vga_draw_header(void) {
     // Clear header
-    vga_draw_filled_box(0, 0, SCREEN_WIDTH, TOP_BAR_H, C_BLACK);
+    vga_draw_filled_box(0, 0, SCREEN_WIDTH, TOP_BAR_H, COLOR_BLACK);
     
     // "Tek" logo style
-    vga_draw_string(4, 2, "Tek", C_WHITE);
+    vga_draw_string(4, 2, "Tek", COLOR_WHITE);
     
     // Run/Stop status
     if (scope.running) {
-        vga_draw_string(30, 2, "Run", C_GREEN);
+        vga_draw_string(30, 2, "Run", COLOR_GREEN);
     } else {
-        vga_draw_string(30, 2, "Stop", C_RED);
+        vga_draw_string(30, 2, "Stop", COLOR_RED);
     }
     
     // Trigger status
     if (scope.triggered) {
-        vga_draw_string(240, 2, "Trig'd", C_GREEN);
+        vga_draw_string(240, 2, "Trig'd", COLOR_GREEN);
     } else {
-        vga_draw_string(240, 2, "Ready", C_GRAY);
+        vga_draw_string(240, 2, "Ready", COLOR_GRAY);
     }
     
     // Separator line
-    hline(0, SCREEN_WIDTH - 1, TOP_BAR_H - 1, C_GRID);
+    hline(0, SCREEN_WIDTH - 1, TOP_BAR_H - 1, COLOR_GRID);
 }
 
 // ============================================================================
@@ -398,49 +386,49 @@ void vga_draw_footer(void) {
     int y = SCREEN_HEIGHT - BOTTOM_BAR_H;
     
     // Clear footer
-    vga_draw_filled_box(0, y, SCREEN_WIDTH, BOTTOM_BAR_H, C_BLACK);
+    vga_draw_filled_box(0, y, SCREEN_WIDTH, BOTTOM_BAR_H, COLOR_BLACK);
     
     // Separator line
-    hline(0, SCREEN_WIDTH - 1, y, C_GRID);
+    hline(0, SCREEN_WIDTH - 1, y, COLOR_GRID);
     
     // Row 1: Channel settings
     int row1 = y + 4;
     
     // CH1 indicator and V/div
-    vga_draw_string(4, row1, "Ch1", C_YELLOW);
-    draw_float(30, row1, scope.ch1_vdiv, 2, C_YELLOW);
-    vga_draw_string(66, row1, "V", C_YELLOW);
+    vga_draw_string(4, row1, "Ch1", COLOR_YELLOW);
+    draw_float(30, row1, scope.ch1_vdiv, 2, COLOR_YELLOW);
+    vga_draw_string(66, row1, "V", COLOR_YELLOW);
     
     // CH2 indicator and V/div  
-    vga_draw_string(90, row1, "Ch2", C_CYAN);
-    draw_float(116, row1, scope.ch2_vdiv, 2, C_CYAN);
-    vga_draw_string(152, row1, "V", C_CYAN);
+    vga_draw_string(90, row1, "Ch2", COLOR_CYAN);
+    draw_float(116, row1, scope.ch2_vdiv, 2, COLOR_CYAN);
+    vga_draw_string(152, row1, "V", COLOR_CYAN);
     
     // Time/div
-    vga_draw_string(175, row1, "M", C_WHITE);
-    draw_float(188, row1, scope.time_div, 1, C_WHITE);
-    vga_draw_string(224, row1, "ms", C_WHITE);
+    vga_draw_string(175, row1, "M", COLOR_WHITE);
+    draw_float(188, row1, scope.time_div, 1, COLOR_WHITE);
+    vga_draw_string(224, row1, "ms", COLOR_WHITE);
     
     // Row 2: Measurements
     int row2 = y + 15;
     
     // CH1 Pk-Pk
-    vga_draw_string(4, row2, "Pk:", C_GRAY);
-    draw_float(28, row2, scope.ch1_pkpk, 2, C_YELLOW);
-    vga_draw_string(70, row2, "V", C_YELLOW);
+    vga_draw_string(4, row2, "Pk:", COLOR_GRAY);
+    draw_float(28, row2, scope.ch1_pkpk, 2, COLOR_YELLOW);
+    vga_draw_string(70, row2, "V", COLOR_YELLOW);
     
     // CH2 Pk-Pk
     if (scope.ch2_enabled) {
-        vga_draw_string(90, row2, "Pk:", C_GRAY);
-        draw_float(114, row2, scope.ch2_pkpk, 2, C_CYAN);
-        vga_draw_string(156, row2, "V", C_CYAN);
+        vga_draw_string(90, row2, "Pk:", COLOR_GRAY);
+        draw_float(114, row2, scope.ch2_pkpk, 2, COLOR_CYAN);
+        vga_draw_string(156, row2, "V", COLOR_CYAN);
     }
     
     // DC coupling indicator
-    vga_draw_string(260, row1, "DC", C_WHITE);
+    vga_draw_string(260, row1, "DC", COLOR_WHITE);
     
     // AD7705 indicator
-    vga_draw_string(260, row2, "16bit", C_GRAY);
+    vga_draw_string(260, row2, "16bit", COLOR_GRAY);
 }
 
 // ============================================================================
@@ -448,7 +436,7 @@ void vga_draw_footer(void) {
 // ============================================================================
 
 void vga_clear_waveform_area(void) {
-    vga_draw_filled_box(GRID_X + 1, GRID_Y + 1, GRID_W - 2, GRID_H - 2, C_BLACK);
+    vga_draw_filled_box(GRID_X + 1, GRID_Y + 1, GRID_W - 2, GRID_H - 2, COLOR_BLACK);
 }
 
 void vga_draw_waveform_segment(int x1, uint16_t y1_adc, int x2, uint16_t y2_adc, uint16_t color) {
@@ -469,7 +457,7 @@ void vga_erase_column(int x) {
     if (x < GRID_X + 1 || x > GRID_X + GRID_W - 2) return;
     
     // Clear column
-    vline(x, GRID_Y + 1, GRID_Y + GRID_H - 2, C_BLACK);
+    vline(x, GRID_Y + 1, GRID_Y + GRID_H - 2, COLOR_BLACK);
     
     // Restore grid
     int div_w = GRID_W / DIV_X;
@@ -481,7 +469,7 @@ void vga_erase_column(int x) {
     // Vertical grid line?
     if (col > 0 && col % div_w == 0 && x != cx) {
         for (int y = GRID_Y; y < GRID_Y + GRID_H; y += 5) {
-            vga_draw_pixel(x, y, C_GRID);
+            vga_draw_pixel(x, y, COLOR_GRID);
         }
     }
     
@@ -489,28 +477,28 @@ void vga_erase_column(int x) {
     for (int i = 1; i < DIV_Y; i++) {
         int gy = GRID_Y + i * div_h;
         if ((x - GRID_X) % 5 == 0) {
-            vga_draw_pixel(x, gy, C_GRID);
+            vga_draw_pixel(x, gy, COLOR_GRID);
         }
     }
     
     // Center horizontal line
     if ((x - GRID_X) % 3 == 0) {
-        vga_draw_pixel(x, cy, C_GRID_BRIGHT);
+        vga_draw_pixel(x, cy, COLOR_GRID_BRIGHT);
     }
     
     // Center vertical line
     if (x == cx) {
         for (int y = GRID_Y; y < GRID_Y + GRID_H; y += 3) {
-            vga_draw_pixel(x, y, C_GRID_BRIGHT);
+            vga_draw_pixel(x, y, COLOR_GRID_BRIGHT);
         }
     }
     
     // Ticks on center line
     int minor = div_w / 5;
     if (col % div_w == 0) {
-        vline(x, cy - 3, cy + 3, C_GRID_BRIGHT);
+        vline(x, cy - 3, cy + 3, COLOR_GRID_BRIGHT);
     } else if (col % minor == 0) {
-        vline(x, cy - 1, cy + 1, C_GRID_BRIGHT);
+        vline(x, cy - 1, cy + 1, COLOR_GRID_BRIGHT);
     }
 }
 
@@ -533,7 +521,7 @@ void vga_get_waveform_bounds(int *top, int *bottom, int *left, int *right) {
 // ============================================================================
 
 void vga_scope_init(void) {
-    vga_clear_screen(C_BLACK);
+    vga_clear_screen(COLOR_BLACK);
     vga_draw_header();
     vga_draw_grid();
     vga_draw_footer();
