@@ -4,8 +4,6 @@
 #include <stdbool.h>
 
 
-
-
 /*
  * set_leds(int led_mask)
  * Takes an integer and writes it to the LED base address to control the 10 LEDs.
@@ -74,5 +72,33 @@ void set_display( int display_number, int value){
 }
 
 
+
+
+
+// 7-Segment Display - Show voltage 
+void display_voltage_7seg(float voltage) {
+    // Display format: X.XX V
+    // HEX displays 5-0: [5][4][3][2][1][0]
+    // We'll use: [5]=tens, [4]=ones, [3]='.', [2]=tenths, [1]=hundredths, [0]=blank
+    
+    // Clamp to 0-9.99
+    if (voltage < 0) voltage = 0;
+    if (voltage > 9.99f) voltage = 9.99f;
+    
+    int v_hundredths = (int)(voltage * 100 + 0.5f);  // e.g., 1.65V -> 165
+    
+    int ones = (v_hundredths / 100) % 10;
+    int tenths = (v_hundredths / 10) % 10;
+    int hundredths = v_hundredths % 10;
+    
+    // Display on 7-segments
+    set_display(5, ones);       // Ones digit
+    set_display(4, tenths);     // Tenths
+    set_display(3, hundredths); // Hundredths
+    // Display 2, 1, 0 could show "V" or be blank
+    set_display(2, 0);
+    set_display(1, 0);
+    set_display(0, 0);
+}
 
 
