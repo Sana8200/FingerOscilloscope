@@ -21,11 +21,7 @@
 #include "delay.h"
 #include "lib.h"
 
-// =============================================================================
-// Configuration
-// =============================================================================
 
-#define VREF            3.3f        // ADC reference voltage
 #define VOLTS_PER_DIV   0.5f        // Default voltage scale
 #define TIME_PER_DIV_US 400.0f      // Default time scale (µs)
 
@@ -41,13 +37,8 @@ static int grat_left, grat_right;
 static uint16_t adc_min = 65535;
 static uint16_t adc_max = 0;
 
-// =============================================================================
-// Helper Functions
-// =============================================================================
 
-static float adc_to_voltage(uint16_t adc_value) {
-    return (float)adc_value * VREF / 65535.0f;
-}
+
 // Scales 16-bit ADC value (0-65535) to Screen Y (239-0)
 // 0V input -> Bottom of screen (Y=239), Max input -> Top of screen (Y=0)
 uint8_t map_adc_to_screen_y(uint16_t adc_value) {
