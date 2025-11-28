@@ -23,7 +23,6 @@ void delay_cycles(uint32_t cycles) {
     }
 }
 
-
 /**
  * Delay for approximately the specified number of microseconds
  * At 30 MHz: 1 µs = 30 cycles 
@@ -43,7 +42,6 @@ void delay_ms(uint32_t milliseconds) {
     }
 }
 
-
 /**
  * Delay for approximately the specified number of nanoseconds
  * At 30 MHz: 1 cycle = 33.33 ns 
@@ -58,6 +56,7 @@ void delay_ns(uint64_t nanoseconds) {
     } 
     delay_cycles(cycles);
 }
+
 
 
 

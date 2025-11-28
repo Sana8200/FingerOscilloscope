@@ -1,6 +1,5 @@
 /**
- * spi_driver.c - Bit-banged SPI driver for AD7705 ADC
- * 
+ * Bit-banged SPI driver for AD7705 ADC
  * SPI Mode 3: CPOL=1 (clock idle high), CPHA=1 (sample on rising edge)
  * 
  * AD7705 SPI Timing:
@@ -15,11 +14,11 @@
 #include "lib.h"
 #include "delay.h"
 
-// Track output state to avoid read-modify-write races
+// Track output state 
 static uint32_t pio_output_state;
 
 // Minimum SPI clock half-period delay
-// AD7705 max SCLK is 2.1 MHz, so half-period >= 238ns
+// AD7705 max SCLK is 5 MHz but for correction operation 3 MHZ, total period = 200ns  half-period = 238ns
 // Using 500ns for safety margin
 static void spi_delay(void) {
     delay_ns(500);
@@ -158,7 +157,7 @@ uint8_t spi_transfer_byte(uint8_t byte_out) {
 }
 
 /**
- * Reset the SPI interface by sending 32 ones
+ * Reset the SPI interface by sending 32 ones - page 31 doc 
  */
 void spi_interface_reset(void) {
     display_string("SPI interface reset...\n");

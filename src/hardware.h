@@ -39,7 +39,6 @@ void set_leds(int led_mask);
 int get_sw(void);
 int get_btn(void);
 void set_display(int display_number, int value);
-
 void display_voltage_7seg(float voltage);
 
 #endif // HARDWARE_H
