@@ -159,7 +159,6 @@ uint8_t spi_transfer_byte(uint8_t byte_out) {
 
 /**
  * Reset the SPI interface by sending 32 ones
- * This is recommended by AD7705 datasheet to reset serial interface
  */
 void spi_interface_reset(void) {
     display_string("SPI interface reset...\n");

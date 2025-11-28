@@ -75,16 +75,11 @@ void handle_interrupt(unsigned cause) {
 // =============================================================================
 
 int main(void) {
-    // ----- Startup Message -----
     display_string("\n");
-    display_string("================================\n");
-    display_string("  DE10-Lite RISC-V Oscilloscope\n");
-    display_string("  AD7705 16-bit ADC\n");
-    display_string("================================\n\n");
+    display_string("================================DE10-Lite RISC-V Oscilloscope, AD7705 16-bit ADC================================\n\n ");
+
     
-    // ----- Initialize Hardware -----
     display_string("Initializing...\n");
-    
     // Timer (200 Hz sample rate)
     display_string("  Timer...");
     timer_init(200);

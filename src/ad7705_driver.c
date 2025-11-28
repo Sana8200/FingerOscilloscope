@@ -1,8 +1,6 @@
 #include "ad7705_driver.h"
 #include "spi_driver.h"
-#include "hardware.h"
 #include "lib.h"
-#include "dtekv-lib.h"
 #include "delay.h"
 
 static void write_byte(uint8_t data);
@@ -21,17 +19,20 @@ void ad7705_init(uint8_t channel) {
     
     // Hardware reset
     spi_reset_pin(false);   // Assert reset (active low)
-    delay_ms(10);           // Hold reset
+    delay_ms(10);           
     spi_reset_pin(true);    // Release reset
     delay_ms(10);           // Wait for ADC to stabilize
     
-    spi_interface_reset();
+    spi_interface_reset();  // resetting spi (safety)
     
-    // Configure Clock Register: CLKDIS=0 (clock enabled), CLKDIV=0 (no division), CLK=1 (MCLK > 2MHz)
-    write_clock_register(channel, 0, 0, 1, UPDATE_RATE_25);
+    // Configure Clock Register: CLKDIS=0 (clock enabled), CLKDIV (division), CLK=1 (MCLK > 2MHz), update rate
+    write_clock_register(channel, 0, 1, 1, UPDATE_RATE_500);
                                   
     // Configure Setup Register: Mode = Self-Cal, Gain = 1, Unipolar, Unbuffered
     write_setup_register(channel, MODE_SELF_CAL, GAIN_1, UNIPOLAR, 0, 0);                   
+    
+    // Watiting for adc to start calibration and stabilize 
+    delay_ms(10);  
     
     // Wait for self-calibration to complete: DRDY goes low when calibration is done - page 18 doc
     display_string("Waiting for calibration...\n");
@@ -44,7 +45,8 @@ void ad7705_init(uint8_t channel) {
  * Read and return raw 16-bit ADC data from specified channel, Blocks until data is ready
  */
 uint16_t ad7705_read_data(uint8_t channel) {
-    while (!check_drdy_register(channel)) {       // Wait for data ready
+    // Wait for data ready
+    while (!check_drdy_register(channel)) {       
         // busy wait 
     }
     set_next_operation(REG_DATA, channel, true);  // read Data Register
@@ -167,9 +169,9 @@ void self_cal_timout(int timeout, uint8_t channel){
         timeout--;
     } 
     if (timeout == 0) {
-        display_string("  !!! ERROR: Cal timeout!\n");
+        display_string("!!! ERROR: Cal timeout!\n");
     } else {
-        display_string("  --> Calibration done!\n");
+        display_string("---> Calibration done!\n");
     }
 }
 

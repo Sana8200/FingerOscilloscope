@@ -1,5 +1,5 @@
 /**
- * AD7705 is a 2-channel, 16-bit ADC , 2 input channels, on chip settings for gain, update_rate
+ * AD7705 is a 2-channel, 16-bit ADC , 2 input channels, on chip settings for gain, update_rate and has a on-chip digital low-pass filter 
  * SPI (Mode 3), Self-calibration and system calibration modes
  */
 
@@ -44,7 +44,7 @@
 
 // Operating Modes (for Setup Register MD1-MD0 bits) - page 18 doc
 #define MODE_NORMAL          0x0    // Normal operation 
-#define MODE_SELF_CAL        0x1    // Self-calibration
+#define MODE_SELF_CAL        0x1    // Self-calibration (what we use)
 #define MODE_ZERO_SCALE_CAL  0x2    // Zero-scale system calibration
 #define MODE_FULL_SCALE_CAL  0x3    // Full-scale system calibration
 

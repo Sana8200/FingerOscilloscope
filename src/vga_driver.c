@@ -367,12 +367,9 @@ void scope_draw_status_bar(void) {
     vga_put_pixel(marker_x - 1, 2, COL_CYAN);
     vga_put_pixel(marker_x + 1, 2, COL_CYAN);
     
-    // Trigger status (right side)
-    if (g_scope.triggered) {
-        vga_text(260, 1, "Trig'd", COL_GREEN);
-    } else {
-        vga_text(260, 1, "Ready", COL_GRAY);
-    }
+
+    vga_text(260, 1, "Ready", COL_GRAY);
+
 }
 
 // =============================================================================
