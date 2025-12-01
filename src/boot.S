@@ -74,6 +74,8 @@ external_irq:
 	and a0, t0, t1
 	jal handle_interrupt
 
+handle_interrupt:
+
 restore:
 	/* Restore registers from the stack */
 	lw x1, 0(sp)

@@ -61,12 +61,12 @@ uint16_t ad7705_read_data(uint8_t channel) {
 
 /**
  * Convert raw ADC value to voltage
- * For unipolar mode: float Voltage = (ADC_Value / 65535) * VREF;
- * For bipolar mode:  float Voltage = ((ADC_Value - 32768) / 32768) * VREF
+ * For unipolar mode: float Voltage = (ADC_Value / 65535.0f) * VREF;
+ * For bipolar mode:  float Voltage = ((ADC_Value - 32768.0f) / 32768.0f) * VREF
  */
 float ad7705_read_voltage(uint8_t channel) {
     uint16_t raw = ad7705_read_data(channel);
-    float Voltage = (raw / 65535) * VREF;
+    float Voltage = ((float)raw / 65535.0f) * VREF;
     return Voltage;
 }
 
