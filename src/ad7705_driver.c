@@ -1,6 +1,6 @@
 #include "ad7705_driver.h"
 #include "spi_driver.h"
-#include "lib.h"
+#include "dtekv-lib.h"
 #include "delay.h"
 
 static void write_byte(uint8_t data);
@@ -11,9 +11,8 @@ static bool check_drdy_register(uint8_t channel);
 void self_cal_timout(int timeout, uint8_t channel);
 
 
-/**
- * Initialize the AD7705 ADC
- */
+
+// Initialize the AD7705 ADC
 void ad7705_init(uint8_t channel) {
     display_string("AD7705 init start\n");
     
@@ -35,15 +34,14 @@ void ad7705_init(uint8_t channel) {
     delay_ms(10);  
     
     // Wait for self-calibration to complete: DRDY goes low when calibration is done - page 18 doc
-    display_string("Waiting for calibration...\n");
+    display_string("Waiting for ad7705 for self-calibration...\n");
     self_cal_timout(500000, channel);
     display_string("AD7705 init complete\n");
 }
 
 
-/**
- * Read and return raw 16-bit ADC data from specified channel, Blocks until data is ready
- */
+
+// Read and return raw 16-bit ADC data from specified channel, Blocks until data is ready
 uint16_t ad7705_read_data(uint8_t channel) {
     // Wait for data ready
     while (!check_drdy_register(channel)) {       
@@ -74,9 +72,8 @@ float ad7705_read_voltage(uint8_t channel) {
 
 
 
-/**
- * Write a single byte to the AD7705
- */
+
+// Write a single byte to the AD7705
 static void write_byte(uint8_t data) {
     spi_select_chip();
     spi_transfer_byte(data);
@@ -178,10 +175,10 @@ void self_cal_timout(int timeout, uint8_t channel){
 
 
 
-/**
- * Read ADC data with timeout (non-blocking)
- */
+
+
 /*
+// Read ADC data with timeout (non-blocking)
 bool ad7705_read_data_timeout(uint8_t channel, uint16_t *data) {
     int timeout = 100000;    
     while (timeout > 0) {
@@ -195,11 +192,8 @@ bool ad7705_read_data_timeout(uint8_t channel, uint16_t *data) {
 }
 */
 
-
-/**
- * Check if data is ready without blocking
- */
 /*
+// Check if data is ready without blocking
 bool ad7705_data_ready(uint8_t channel) {
     return check_drdy_register(channel);
 }

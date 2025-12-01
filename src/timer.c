@@ -9,18 +9,14 @@ void timer_init(int target_frequency_hz) {
     // Clear the Time-Out (TO) status bit
     *TIMER_STATUS = 0;
 
-    // Calculate the period count
-    // Formula: Clock_Freq / Target_Freq (target frequency we can modify)
+    // Calculate the period count => Clock_Freq / Target_Freq (target frequency we can modify)
     int period_count = SYSTEM_CLOCK_FREQ / target_frequency_hz;
 
-    // Write the period to the Low and High registers
-    // The timer loads this value when it resets.
+    // Write the period to the Low and High registers- The timer loads this value when it resets.
     *TIMER_PERIODL = (period_count & 0xFFFF);        // Lower 16 bits
     *TIMER_PERIODH = ((period_count >> 16) & 0xFFFF); // Upper 16 bits
 
-    // 5. Start the timer
-    // We set START (bit 2) and CONT (bit 1) for continuous mode.
-    // 0x4 | 0x2 = 0x6
+    // Start the timer - We set START (bit 2) and CONT (bit 1) for continuous mode. : 0x4 | 0x2 = 0x6
     *TIMER_CTRL = TIMER_CTRL_START | TIMER_CTRL_CONT;
 }
 
