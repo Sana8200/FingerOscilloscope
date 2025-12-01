@@ -75,6 +75,7 @@ external_irq:
 	jal handle_interrupt
 
 handle_interrupt:
+    ret
 
 restore:
 	/* Restore registers from the stack */
