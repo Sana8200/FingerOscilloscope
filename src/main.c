@@ -69,7 +69,8 @@ void handle_interrupt(unsigned cause) {
 
 
 int main(void) {
-    display_string("\n================DE10-Lite RISC-V Oscilloscope, AD7705 16-bit ADC==================\n\n ");
+    display_string("\n");
+    display_string("================DE10-Lite RISC-V Oscilloscope, AD7705 16-bit ADC==================\n\n ");
 
     
     display_string("Initializing...\n");
@@ -78,8 +79,11 @@ int main(void) {
     timer_init(200);
     display_string(" OK\n");
     
+    // SPI interface
+    display_string("  SPI...");
     spi_init();
     delay_ms(50);
+    display_string(" OK\n");
     
     // AD7705 ADC
     display_string("  AD7705 ADC...\n");
@@ -90,7 +94,17 @@ int main(void) {
     display_string("  VGA display...");
     scope_init();
     display_string(" OK\n");
-
+    
+    // ----- Configure Scope State -----
+    g_scope.ch1_vdiv = VOLTS_PER_DIV;
+    g_scope.time_div_ms = TIME_PER_DIV_US / 1000.0f;
+    g_scope.time_is_us = true;
+    g_scope.ch1_enabled = true;
+    g_scope.ch2_enabled = false;
+    g_scope.running = true;
+    g_scope.trig_level_mv = 80.0f;
+    g_scope.ch1_y_offset = 0;  // Center channel 1
+    
     // Update display with initial settings
     scope_redraw_all();
     
