@@ -39,7 +39,8 @@
 mytime:	.word 	0x5957
 timstr:	.asciz 	"text more text lots of text\0"
 	.text
-	.globl timetemplate, tick, time2string, delay, hexasc, display_string, spi_delay_nanos
+	.globl timetemplate, tick, time2string, delay, hexasc, display_string, delay_cycles_asm
+  .size delay_cycles_asm, .-delay_cycles_asm
 
 # Function for displaying a string with a newline at the end	
 display_string:	
@@ -113,66 +114,53 @@ tiend:	sw	t0,0(a0)	# save updated result
 #########################################################
 
 
-# time2string : converts 16-bit NBCD time value into a MM:SS ASCII string 
-# a0 memory address where the output string will be stored 
-# a1 16-bit time value 
-# no return value 
-  
-                                     
+# time2string : converts 16-bit NBCD time value into a MM:SS ASCII string                                   
 time2string:
+       addi sp, sp, -12      
+       sw ra, 8(sp)        
+       sw s0, 4(sp)          
+       sw s1, 0(sp)         
        
-       # save registers that will modify, save values in the return address ra, and any saved registers s0-s11 that we use 
-       addi sp, sp, -12       # Adjust stack pointer to make space for 3 registers 
-       sw ra, 8(sp)           # Saveing return address, so we can return to timetemplate
-       sw s0, 4(sp)           # Saving orginial value of s0
-       sw s1, 0(sp)           # Saving original value of s1 
-       
-       
-       mv s0, a0              # Copying destination address a0 into s0, saviing string address 
-       mv s1, a1              # Copying time value a1 into s1, saving time value
+       mv s0, a0              
+       mv s1, a1            
        
        # 1. First minute , first digit 
-       srli a0, s1, 12        # Shift right by 12 bits to isolate the first digit
-       jal hexasc             # Convert first digit to its ASCII character 
-       sb a0, 0(s0)           # Store the ASCII character of the first digit at the start of the string into a0 memory address for the string 
+       srli a0, s1, 12       
+       jal hexasc            
+       sb a0, 0(s0)           
        
        # 2. Second minute , second digit 
-       srli a0, s1, 8         # Shift right by 8 bits 
-       jal hexasc             # Convert the lowest 4 bits to its ASCII character 
-       sb a0, 1(s0)           # Store the ASCII character at the second position in the string which has index 1 
+       srli a0, s1, 8        
+       jal hexasc           
+       sb a0, 1(s0)         
        
        # 3. Colon character : We will add the colon character, it doens't need to converted each time, 
-       li t0, 0x3A            # Loading the ASCII code for : into the temporary register t0
-       sb t0, 2(s0)           # Storing the colon at the third position in the memory in the String ( index 2)
+       li t0, 0x3A           
+       sb t0, 2(s0)           
        
        # 4. First second digit 
-       srli a0, s1, 4         # Shift right by 4 bits 
-       jal hexasc             # Convert to ASCII
-       sb a0, 3(s0)           # Store the first digit of second at 4th position in the memory string 
-       
-       
+       srli a0, s1, 4     
+       jal hexasc         
+       sb a0, 3(s0)           
+              
        # 5. Second second digit, last digit of the time, 4 lsb  
-       mv a0, s1              # We don't need any shift, the digit is already in the lowest 4 bit 
-       jal hexasc             # Converting to ASCII
-       sb a0, 4(s0)           # Storing ASCII character at the 5th position in the string in the memory 
+       mv a0, s1             
+       jal hexasc            
+       sb a0, 4(s0)           
        
        # 6. Null byte
-       li t0, 0x00            # Loding the value for null byte which is 0 
-       sb t0, 5(s0)           # Store the null byte ro mark the end of the string which is 6th position, index 5
-       
-       
+       li t0, 0x00          
+       sb t0, 5(s0)         
+              
        # Restoring hte original register values, restoring is done in the reverse order that we saved them 
        lw s1, 0(sp)          
        lw s0, 4(sp)
        lw ra, 8(sp) 
-       addi sp, sp, 12        # Deallocate the space on the stack 
+       addi sp, sp, 12       
+          
+       jr ra     
        
        
-       jr ra                 # Return to the calling funciton timetemplate 
-       
-       
- 
-
 hexasc:
     andi a0, a0, 0xF            
     li   t0, 10                 
@@ -188,60 +176,38 @@ letters:
 
 
 # Delay function runs a busy loop to make delay in the program, inefficient way to create a delay 
-
-# a0   number of milliseconds (ms)   a0 = ms 
-# t0  counter for the inner loop ( i )     t0 = i 
-# t1 = upper limit for i (t0), constant 4711
-
-# Constant 4711 which is the upper limit for inner loop counter i in the c code, determines how long the inner loop runs.
-# We can change and adjust it by testing to make one pass of the outer_loop takes approximately 1 milliseconds of simulated time 
-
-
 delay:
-    blez a0, exit_delay          # Branch to exit_delay if a0 <= 0 which corresponds to ms <= 0, first check for the C code, while(ms>0)
-  # bne a0, x0, exit_delay     # If a0 is zero or negative, we don't need to do anything, we jump straight to the end  
-      
-                                                            
-### While loop is the main counter, keeping track of how many 1 miilisecond interval you still need to wait, a0 which is ms holds this count 
-### If we call delay(1000) the a0 starts at 1000 go through the inner for loop and decrement by one each time until it's 0, it's gonna stop when a0 > 0 or ms > 0                                 
-while_loop:                      # outer loop runs once for each millisecond (a0), Outer loop is while loop's body 
-                              
-################## 1 ms timer                                                                                              
-    # for loop start (i = 0 ; i < 4711 ; i = i + 1)                         
-    li t1, 3000                  # constant upper limit for i in the inner for loop     t1 = 4711
-    li t0, 0                     #  i, t0 = 0 , reseting the inner loop counter i to 0 
+    blez a0, exit_delay         
+                               
+while_loop:                                                                                                                                       
+    li t1, 3000                
+    li t0, 0                 
     
-for_loop:                        # inner loop is the for loop's body which counts up to the limit to waste time and make delay. 
+for_loop:                     
+    addi t0, t0, 1            
+    blt t0, t1, for_loop        
+    addi a0, a0, -1            
+    bgtz a0, while_loop      
 
-    addi t0, t0, 1               # incrementing the counter i = i + 1 
-    blt t0, t1, for_loop         # if i < limit , if t0 < t1 then continure the inner loop, branch back to the start of the inner_loop   i < 4711
-    
-################## end of 1 ms timer   
-  
-    # End of the 'for' loop, At this point, about 1 millisecond of time has passed.
-
-    addi a0, a0, -1              # ms = ms - 1,  decrementing the main millisecond counter ms (a0) by one 
-
-    bgtz a0, while_loop          # final check, if ms > 0, which means if a0 is still greater than 0 then branch back to the outer while loop to wait for another millisecond
-  # blt x0, a0, while loop     # bgtz is the instruction that makes the outer while loop to repeat  
-
-
-
-exit_delay:                      # Exit point for the function 
-    jr ra                        # returning from a subroutine
+exit_delay:                    
+    jr ra                      
   # ret 
 
 
 
 
-spi_delay_nanos:
-    /* * Target: Roughly 100ns delay (e.g., 5 cycles at 50MHz, or 10 cycles at 100MHz).
-     * We use a few NOPs to create a minimal, stable delay window for SPI setup/hold times.
-     */
-    nop
-    nop
-    nop
-    nop
-    nop
+
+# void delay_cycles_asm(uint32_t cycles)
+# Arguments: a0 = number of cycles to delay
+delay_cycles_asm:
+    li t0, 9                    # Load divisor (9 cycles per iteration)
+    divu t1, a0, t0             # t1 = cycles / 9 (iterations needed)
+    beqz t1, exit_this_delay         # If zero iterations, exit immediately
     
-    ret // Return from the function
+delay_loop:
+    addi t1, t1, -1             # Decrement iteration counter
+    bnez t1, delay_loop         # Loop if not zero
+    
+exit_this_delay:
+    ret                         # Return to caller
+
