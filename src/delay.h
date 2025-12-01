@@ -1,4 +1,3 @@
-
 #ifndef DELAY_H
 #define DELAY_H
 
@@ -9,4 +8,7 @@ void delay_us(uint32_t microseconds);
 void delay_ms(uint32_t milliseconds);
 void delay_ns(uint64_t nanoseconds);
 
-#endif // DELAY_H
+// Assembly implementation (for full control)
+// extern void delay_cycles_asm(uint32_t cycles);
+
+#endif  /* DELAY_H */

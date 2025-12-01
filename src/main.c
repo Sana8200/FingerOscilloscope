@@ -17,7 +17,7 @@
 #include "timer.h"
 #include "dtekv-lib.h"
 #include "delay.h"
-#include "lib.h"
+
 
 #define VREF                3.3f    // Reference voltage
 #define VOLTS_PER_DIV       0.5f    // Voltage scale
