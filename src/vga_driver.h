@@ -1,129 +1,52 @@
-
-#ifndef VGA_SCOPE_H
-#define VGA_SCOPE_H
+#ifndef VGA_DRIVER_H
+#define VGA_DRIVER_H
 
 #include <stdint.h>
 #include <stdbool.h>
 
+// ==========================================
+// CONFIGURATION
+// ==========================================
+#define SCREEN_WIDTH        320
+#define SCREEN_HEIGHT       240
+#define VGA_BUFFER_BASE     0x08000000
 
-#define SCREEN_WIDTH    320
-#define SCREEN_HEIGHT   240
+// Pointer to the pixel buffer (8-bit color depth)
+#define pVGA_PIXEL_BUFFER   ((volatile uint8_t *) VGA_BUFFER_BASE)
 
-// Memory-mapped VGA buffer
-#define VGA_BASE        0x08000000
-#define VGA_BUFFER      ((volatile uint16_t *)VGA_BASE)
+// ==========================================
+// PRO_STYLE COLOR PALETTE (RRRGGGBB 8-bit)
+// ==========================================
+#define COLOR_BLACK         0x00
+#define COLOR_WHITE         0xFF
+#define COLOR_RED           0xE0 
+#define COLOR_GREEN         0x1C 
+#define COLOR_BLUE          0x03 
+#define COLOR_YELLOW        0xFC 
+#define COLOR_CYAN          0x1F 
+#define COLOR_MAGENTA       0xE3 
+#define COLOR_GRID_GRAY     0x49 // Dim gray for the grid lines
+#define COLOR_ORANGE        0xEC // A nice orange for the waveform
 
+// ==========================================
+// FUNCTION PROTOTYPES
+// ==========================================
 
-#define COL_BLACK       0x00
-#define COL_WHITE       0xFF
-#define COL_GRAY        0x92    // Medium gray for dim text
-#define COL_DARK_GRAY   0x49    // Dark gray for grid
+void vga_clear_screen(uint8_t color);
+void vga_draw_pixel(int x, int y, uint8_t color);
+void vga_draw_line(int x0, int y0, int x1, int y1, uint8_t color);
+void vga_draw_dashed_line(int x0, int y0, int x1, int y1, uint8_t color);
+void vga_draw_rect(int x, int y, int w, int h, uint8_t color);
+void vga_draw_filled_rect(int x, int y, int w, int h, uint8_t color);
 
-// Waveform colors (matching Tek)
-#define COL_CH1         0xFC    // Yellow (Ch1 waveform)
-#define COL_CH2         0xE3    // Magenta/Red (Ch2 waveform)
+// Text Functions
+void vga_draw_char(int x, int y, char c, uint8_t color);
+void vga_draw_string(int x, int y, const char *str, uint8_t color);
 
-// UI colors
-#define COL_GREEN       0x1C    // Run indicator, Trig'd
-#define COL_RED         0xE0    // Stop indicator
-#define COL_CYAN        0x1F    // Secondary info
+// Scientific UI Functions
+void vga_draw_grid_axis(void);
 
-// Grid colors
-#define COL_GRID_DIM    0x24    // Dotted grid lines
-#define COL_GRID_BRIGHT 0x49    // Major lines, center cross
+// Helper
+int vga_map_voltage(float voltage, float min_v, float max_v);
 
-// Status bar (top)
-#define STATUS_BAR_Y    0
-#define STATUS_BAR_H    10
-
-// Graticule (waveform area)
-#define GRAT_X          0
-#define GRAT_Y          10
-#define GRAT_W          320
-#define GRAT_H          200
-
-// Divisions (standard 10x8 scope grid)
-#define DIV_X           10
-#define DIV_Y           8
-
-// Info bar (bottom)
-#define INFO_BAR_Y      210
-#define INFO_BAR_H      30
-
-typedef struct {
-    // Run state
-    bool running;           // true = Run, false = Stop
-    bool triggered;         // true = Trig'd, false = Ready
-    
-    // Channel 1 settings
-    bool ch1_enabled;
-    float ch1_vdiv;         // Volts per division
-    int ch1_coupling;       // 0=DC, 1=AC, 2=GND
-    int ch1_y_offset;       // Vertical position (pixels from center)
-    
-    // Channel 2 settings  
-    bool ch2_enabled;
-    float ch2_vdiv;
-    int ch2_coupling;
-    int ch2_y_offset;
-    
-    // Timebase
-    float time_div_ms;      // Time per division in ms (or µs)
-    bool time_is_us;        // true if time_div is in µs
-    
-    // Trigger
-    int trig_channel;       // 1 or 2
-    float trig_level_mv;    // Trigger level in mV
-    int trig_y_pos;         // Trigger marker Y position
-    
-    // Measurements
-    float ch1_vpp;          // Peak-to-peak voltage
-    float ch2_vpp;
-    
-    // Horizontal position (0-100, 50 = center)
-    int horiz_pos;
-    
-} ScopeState;
-
-// Global scope state
-extern ScopeState g_scope;
-
-void vga_put_pixel(int x, int y, uint8_t color);
-uint8_t vga_get_pixel(int x, int y);
-void vga_clear(uint8_t color);
-void vga_hline(int x1, int x2, int y, uint8_t color);
-void vga_vline(int x, int y1, int y2, uint8_t color);
-void vga_line(int x1, int y1, int x2, int y2, uint8_t color);
-void vga_rect(int x, int y, int w, int h, uint8_t color);
-void vga_rect_fill(int x, int y, int w, int h, uint8_t color);
-void vga_char(int x, int y, char c, uint8_t color);
-void vga_text(int x, int y, const char *str, uint8_t color);
-void vga_int(int x, int y, int value, uint8_t color);
-void vga_float(int x, int y, float value, int decimals, uint8_t color);
-void scope_init(void);
-void scope_redraw_all(void);
-void scope_draw_status_bar(void);
-void scope_draw_graticule(void);
-void scope_draw_info_bar(void);
-void scope_draw_ground_markers(void);
-void scope_draw_trigger_marker(void);
-void scope_clear_waveform(void);
-void scope_draw_point(int x, uint16_t adc_value, uint8_t channel);
-void scope_draw_segment(int x1, uint16_t adc1, int x2, uint16_t adc2, uint8_t channel);
-void scope_erase_column(int x);
-int scope_adc_to_y(uint16_t adc_value, uint8_t channel);
-int scope_get_left(void);
-int scope_get_right(void);
-int scope_get_top(void);
-int scope_get_bottom(void);
-void scope_set_running(bool running);
-void scope_set_triggered(bool triggered);
-void scope_set_ch1_vdiv(float vdiv);
-void scope_set_ch2_vdiv(float vdiv);
-void scope_set_timebase(float time_div, bool is_microseconds);
-void scope_set_trigger_level(float level_mv);
-void scope_set_measurements(float ch1_vpp, float ch2_vpp);
-
-#endif // VGA_SCOPE_H
-
-
+#endif // VGA_DRIVER_H
