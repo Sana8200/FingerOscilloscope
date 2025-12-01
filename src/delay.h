@@ -11,4 +11,4 @@ void delay_ns(uint64_t nanoseconds);
 // Assembly implementation (for full control)
 // extern void delay_cycles_asm(uint32_t cycles);
 
-#endif // DELAY_H
+#endif  /* DELAY_H */

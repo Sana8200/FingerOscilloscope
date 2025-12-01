@@ -19,7 +19,7 @@
 #include "timer.h"
 #include "dtekv-lib.h"
 #include "delay.h"
-#include "lib.h"
+
 
 
 #define VOLTS_PER_DIV   0.5f        // Default voltage scale
@@ -62,21 +62,15 @@ static void update_stats(uint16_t value) {
     if (value > adc_max) adc_max = value;
 }
 
-// =============================================================================
-// Interrupt Handler (if needed)
-// =============================================================================
 
 void handle_interrupt(unsigned cause) {
     // Timer interrupt handling if needed
 }
 
-// =============================================================================
-// Main Program
-// =============================================================================
 
 int main(void) {
     display_string("\n");
-    display_string("================================DE10-Lite RISC-V Oscilloscope, AD7705 16-bit ADC================================\n\n ");
+    display_string("================DE10-Lite RISC-V Oscilloscope, AD7705 16-bit ADC==================\n\n ");
 
     
     display_string("Initializing...\n");
@@ -125,10 +119,6 @@ int main(void) {
     }
     
     display_string("\nReady! Starting acquisition...\n\n");
-    
-    // ==========================================================================
-    // Main Loop - Continuous Acquisition
-    // ==========================================================================
     
     uint32_t frame_count = 0;
     
