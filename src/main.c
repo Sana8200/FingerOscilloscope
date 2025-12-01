@@ -1,15 +1,3 @@
-/**
- * main.c - Real-Time Oscilloscope
- * 
- * DE10-Lite RISC-V + AD7705 16-bit ADC + VGA Display
- * 
- * Features:
- * - Real-time scrolling waveform display
- * - Tektronix-style oscilloscope UI
- * - Voltage measurements (Vpp, min, max)
- * - Professional grid display
- */
-
 #include <stdint.h>
 #include <stdbool.h>
 #include "hardware.h"
@@ -20,213 +8,117 @@
 #include "dtekv-lib.h"
 #include "delay.h"
 
+// Configuration
+#define V_MIN  0.0f 
+#define V_MAX  3.3f 
+#define ERASE_BAR_WIDTH 8 
 
+// Screen Layout Constants (Must match vga_driver.c)
+#define LEFT_MARGIN 30
+#define RIGHT_MARGIN 10
+#define GRAPH_WIDTH (SCREEN_WIDTH - LEFT_MARGIN - RIGHT_MARGIN)
 
-#define VOLTS_PER_DIV   0.5f        // Default voltage scale
-#define TIME_PER_DIV_US 400.0f      // Default time scale (µs)
-
-// =============================================================================
-// Waveform State
-// =============================================================================
-
-static uint16_t waveform_buffer[SCREEN_WIDTH];
-static int current_x;
-static int grat_left, grat_right;
-
-// Statistics
-static uint16_t adc_min = 65535;
-static uint16_t adc_max = 0;
-
-
-
-// Scales 16-bit ADC value (0-65535) to Screen Y (239-0)
-// 0V input -> Bottom of screen (Y=239), Max input -> Top of screen (Y=0)
-uint8_t map_adc_to_screen_y(uint16_t adc_value) {
-    // 65535 / 240 is approx 273. 
-    // We divide by 274 to stay safely within 0-239 range.
-    uint16_t scaled = adc_value / 274;
-    
-    if (scaled > 239) scaled = 239;
-    
-    // 0 is at the bottom
-    return (uint8_t)(SCREEN_HEIGHT - 1 - scaled);
+void ftoa_simple(float f, char *buffer) {
+    int whole = (int)f;
+    int frac = (int)((f - whole) * 10); // 1 decimal place
+    if (frac < 0) frac = -frac;
+    // Manual conversion since we might lack sprintf
+    buffer[0] = '0' + (whole % 10); // Single digit support for 0-9V
+    buffer[1] = '.';
+    buffer[2] = '0' + (frac % 10);
+    buffer[3] = 'V';
+    buffer[4] = '\0';
 }
-
-static void reset_stats(void) {
-    adc_min = 65535;
-    adc_max = 0;
-}
-
-static void update_stats(uint16_t value) {
-    if (value < adc_min) adc_min = value;
-    if (value > adc_max) adc_max = value;
-}
-
-
-void handle_interrupt(unsigned cause) {
-    // Timer interrupt handling if needed
-}
-
 
 int main(void) {
+    display_string("\n=== OSCILLOSCOPE START ===\n");
 
-    display_string("\n================DE10-Lite RISC-V Oscilloscope, AD7705 16-bit ADC==================\n\n ");
-
-    
-    display_string("Initializing...\n");
-    // Timer (200 Hz sample rate)
-    display_string("  Timer...");
+    // Init Hardware
     timer_init(200);
-    display_string(" OK\n");
-    
-    spi_init();
+    //spi_init();
     delay_ms(50);
-    
-    // AD7705 ADC
-    display_string("  AD7705 ADC...\n");
-    ad7705_init(CHN_AIN1);
+    //ad7705_init(CHN_AIN1);
     delay_ms(100);
+
+    // Setup Screen UI
+    vga_clear_screen(COLOR_BLACK);
+    vga_draw_grid_axis();
     
-    // VGA Display
-    display_string("  VGA display...");
-    scope_init();
-    display_string(" OK\n");
-    
-    // ----- Configure Scope State -----
-    g_scope.ch1_vdiv = VOLTS_PER_DIV;
-    g_scope.time_div_ms = TIME_PER_DIV_US / 1000.0f;
-    g_scope.time_is_us = true;
-    g_scope.ch1_enabled = true;
-    g_scope.ch2_enabled = false;
-    g_scope.running = true;
-    g_scope.trig_level_mv = 80.0f;
-    g_scope.ch1_y_offset = 0;  // Center channel 1
-    
-    // Update display with initial settings
-    scope_redraw_all();
-    
-    // ----- Get Drawing Bounds -----
-    grat_left = scope_get_left();
-    grat_right = scope_get_right();
-    current_x = grat_left;
-    
-    // Initialize waveform buffer to mid-scale
-    for (int i = 0; i < SCREEN_WIDTH; i++) {
-        waveform_buffer[i] = 32768;
-    }
-    
-    display_string("\nReady! Starting acquisition...\n\n");
-    
-    uint32_t frame_count = 0;
-    
+    // Draw Header
+    vga_draw_string(30, 5, "CH1 =", COLOR_YELLOW); // Label
+    vga_draw_string(150, 5, "PRO-SCOPE V1.0", COLOR_BLUE);
+
+    int x_index = 0; // 0 to GRAPH_WIDTH
+    int prev_x = LEFT_MARGIN;
+    int prev_y = SCREEN_HEIGHT / 2;
+    char text_buf[8];
+
     while (1) {
-        // ----- Read ADC Sample -----
-        uint16_t adc_raw = ad7705_read_data(CHN_AIN1);
+        // --- Read ADC ---
+        float voltage = ad7705_read_voltage(CHN_AIN1);
+        display_voltage_7seg(voltage);
+
+        // --- Update Top Status Bar (Every ~32 pixels to reduce flicker) ---
+        if (x_index % 32 == 0) {
+            // Draw a black box to erase old text
+            vga_draw_filled_rect(65, 5, 40, 8, COLOR_BLACK); 
+            ftoa_simple(voltage, text_buf);
+            vga_draw_string(65, 5, text_buf, COLOR_YELLOW);
+        }
+
+        // --- Calculate Coordinates ---
+        int current_y = vga_map_voltage(voltage, V_MIN, V_MAX);
+        int current_x = LEFT_MARGIN + x_index;
+
+        // --- Erase Future Bar ---
+        // Only erase INSIDE the graph area
+        int top_y = 20;
+        int graph_h = SCREEN_HEIGHT - 40;
         
-        // Update statistics
-        update_stats(adc_raw);
+        int erase_x_start = current_x + 1;
+        int erase_x_end = current_x + ERASE_BAR_WIDTH;
         
-        // LED feedback (show upper bits of ADC value)
-        set_leds(adc_raw >> 8);
-        
-        // ----- Draw Waveform -----
-        
-        // Erase old data at current position and restore grid
-        scope_erase_column(current_x);
-        
-        // Get previous sample for line drawing
-        int prev_x = (current_x == grat_left) ? grat_right : current_x - 1;
-        uint16_t prev_adc = waveform_buffer[prev_x];
-        
-        // Draw line segment connecting samples
-        if (current_x > grat_left) {
-            scope_draw_segment(prev_x, prev_adc, current_x, adc_raw, 1);
+        for (int ex = erase_x_start; ex <= erase_x_end; ex++) {
+            if (ex >= (LEFT_MARGIN + GRAPH_WIDTH)) continue; // Don't erase right border
+            
+            int wrapped_ex = LEFT_MARGIN + ((ex - LEFT_MARGIN) % GRAPH_WIDTH);
+            
+            // Draw vertical black line inside graph bounds
+            vga_draw_line(wrapped_ex, top_y + 1, wrapped_ex, top_y + graph_h - 1, COLOR_BLACK);
+            
+            // Re-draw Dashed Grid lines if we erased them
+            // Vertical Grid Lines (approx every 35px inside graph)
+            if ((wrapped_ex - LEFT_MARGIN) % (GRAPH_WIDTH / 8) == 0) {
+                 vga_draw_dashed_line(wrapped_ex, top_y + 1, wrapped_ex, top_y + graph_h - 1, COLOR_GRID_GRAY);
+            }
+            // Horizontal Grid Lines need to be redrawn pixel by pixel
+            for (int i = 1; i < 6; i++) {
+                int gy = top_y + (i * (graph_h / 6));
+                // Redraw dash pattern logic: (x % 6 < 2)
+                if (wrapped_ex % 6 < 2) {
+                    vga_draw_pixel(wrapped_ex, gy, COLOR_GRID_GRAY);
+                }
+            }
+        }
+
+        // --- Draw Waveform ---
+        if (x_index > 0) {
+            vga_draw_line(prev_x, prev_y, current_x, current_y, COLOR_ORANGE);
         } else {
-            // First point of sweep - just draw a dot
-            scope_draw_point(current_x, adc_raw, 1);
+            vga_draw_pixel(current_x, current_y, COLOR_ORANGE);
+            // Fix left edge continuity
+            prev_x = current_x; 
         }
+
+        // --- Advance ---
+        prev_x = current_x;
+        prev_y = current_y;
+        x_index++;
         
-        // Store sample in buffer
-        waveform_buffer[current_x] = adc_raw;
-        
-        // ----- Advance Position -----
-        current_x++;
-        
-        if (current_x > grat_right) {
-            // End of sweep - wrap around
-            current_x = grat_left;
-            
-            // Update measurements once per sweep
-            float v_max = map_adc_to_screen_y(adc_max);
-            float v_min = map_adc_to_screen_y(adc_min);
-            float v_pp = v_max - v_min;
-            
-            g_scope.ch1_vpp = v_pp;
-            g_scope.triggered = true;
-            
-            // Update display info bar
-            scope_draw_info_bar();
-            scope_draw_status_bar();
-            
-            // Debug output every 10 frames
-            frame_count++;
-            if (frame_count % 10 == 0) {
-                print("Frame ");
-                print_dec(frame_count);
-                print("  ADC: ");
-                print_dec(adc_raw);
-                print("  Vpp: ");
-                print_dec((uint32_t)(v_pp * 1000));  // mV
-                print(" mV\n");
-            }
-            
-            // Reset statistics for next sweep
-            reset_stats();
-        }
-        
-        // ----- Handle User Input -----
-        int switches = get_sw();
-        
-        // Switch 0: Toggle CH2
-        static int prev_sw0 = 0;
-        int sw0 = switches & 0x01;
-        if (sw0 && !prev_sw0) {
-            g_scope.ch2_enabled = !g_scope.ch2_enabled;
-            scope_draw_info_bar();
-            scope_draw_ground_markers();
-        }
-        prev_sw0 = sw0;
-        
-        // Switch 1: Change voltage scale
-        static int prev_sw1 = 0;
-        int sw1 = (switches >> 1) & 0x01;
-        if (sw1 && !prev_sw1) {
-            // Cycle through: 0.5V, 1.0V, 2.0V
-            if (g_scope.ch1_vdiv < 0.7f) {
-                g_scope.ch1_vdiv = 1.0f;
-            } else if (g_scope.ch1_vdiv < 1.5f) {
-                g_scope.ch1_vdiv = 2.0f;
-            } else {
-                g_scope.ch1_vdiv = 0.5f;
-            }
-            scope_draw_info_bar();
-        }
-        prev_sw1 = sw1;
-        
-        // Switch 9: Run/Stop toggle
-        static int prev_sw9 = 0;
-        int sw9 = (switches >> 9) & 0x01;
-        if (sw9 && !prev_sw9) {
-            g_scope.running = !g_scope.running;
-            scope_draw_status_bar();
-        }
-        prev_sw9 = sw9;
-        
-        // If stopped, skip acquisition
-        if (!g_scope.running) {
-            delay_ms(10);
+        if (x_index >= GRAPH_WIDTH) {
+            x_index = 0;
+            prev_x = LEFT_MARGIN; // Reset to left edge
         }
     }
-    
     return 0;
 }
