@@ -1,212 +1,290 @@
+// VGA driver 320x240 pixels, 8-bit color (RGB332)
 #include "vga_driver.h"
 
-// ==========================================
-// MINIMAL 5x7 BITMAP FONT
-// ==========================================
-// Each byte represents a column of the character. 
-// LSB (Bit 0) is the TOP of the character.
-static const uint8_t font5x7[][5] = {
-    {0x00, 0x00, 0x00, 0x00, 0x00}, // space
-    {0x00, 0x00, 0x5F, 0x00, 0x00}, // !
-    {0x00, 0x07, 0x00, 0x07, 0x00}, // "
-    {0x14, 0x7F, 0x14, 0x7F, 0x14}, // #
-    {0x24, 0x2A, 0x7F, 0x2A, 0x12}, // $
-    {0x23, 0x13, 0x08, 0x64, 0x62}, // %
-    {0x36, 0x49, 0x55, 0x22, 0x50}, // &
-    {0x00, 0x05, 0x03, 0x00, 0x00}, // '
-    {0x00, 0x1C, 0x22, 0x41, 0x00}, // (
-    {0x00, 0x41, 0x22, 0x1C, 0x00}, // )
-    {0x14, 0x08, 0x3E, 0x08, 0x14}, // *
-    {0x08, 0x08, 0x3E, 0x08, 0x08}, // +
-    {0x00, 0x50, 0x30, 0x00, 0x00}, // ,
-    {0x08, 0x08, 0x08, 0x08, 0x08}, // -
-    {0x00, 0x60, 0x60, 0x00, 0x00}, // .
-    {0x20, 0x10, 0x08, 0x04, 0x02}, // /
-    {0x3E, 0x51, 0x49, 0x45, 0x3E}, // 0
-    {0x00, 0x42, 0x7F, 0x40, 0x00}, // 1
-    {0x42, 0x61, 0x51, 0x49, 0x46}, // 2
-    {0x21, 0x41, 0x45, 0x4B, 0x31}, // 3
-    {0x18, 0x14, 0x12, 0x7F, 0x10}, // 4
-    {0x27, 0x45, 0x45, 0x45, 0x39}, // 5
-    {0x3C, 0x4A, 0x49, 0x49, 0x30}, // 6
-    {0x01, 0x71, 0x09, 0x05, 0x03}, // 7
-    {0x36, 0x49, 0x49, 0x49, 0x36}, // 8
-    {0x06, 0x49, 0x49, 0x29, 0x1E}, // 9
-    {0x00, 0x36, 0x36, 0x00, 0x00}, // :
-    {0x00, 0x56, 0x36, 0x00, 0x00}, // ;
-    {0x08, 0x14, 0x22, 0x41, 0x00}, // <
-    {0x14, 0x14, 0x14, 0x14, 0x14}, // =
-    {0x00, 0x41, 0x22, 0x14, 0x08}, // >
-    {0x02, 0x01, 0x51, 0x09, 0x06}, // ?
-    {0x32, 0x49, 0x79, 0x41, 0x3E}, // @
-    {0x7E, 0x11, 0x11, 0x11, 0x7E}, // A
-    {0x7F, 0x49, 0x49, 0x49, 0x36}, // B
-    {0x3E, 0x41, 0x41, 0x41, 0x22}, // C
-    {0x7F, 0x41, 0x41, 0x22, 0x1C}, // D
-    {0x7F, 0x49, 0x49, 0x49, 0x41}, // E
-    {0x7F, 0x09, 0x09, 0x09, 0x01}, // F
-    {0x3E, 0x41, 0x49, 0x49, 0x7A}, // G
-    {0x7F, 0x08, 0x08, 0x08, 0x7F}, // H
-    {0x00, 0x41, 0x7F, 0x41, 0x00}, // I
-    {0x20, 0x40, 0x41, 0x3F, 0x01}, // J
-    {0x7F, 0x08, 0x14, 0x22, 0x41}, // K
-    {0x7F, 0x40, 0x40, 0x40, 0x40}, // L
-    {0x7F, 0x02, 0x0C, 0x02, 0x7F}, // M
-    {0x7F, 0x04, 0x08, 0x10, 0x7F}, // N
-    {0x3E, 0x41, 0x41, 0x41, 0x3E}, // O
-    {0x7F, 0x09, 0x09, 0x09, 0x06}, // P
-    {0x3E, 0x41, 0x51, 0x21, 0x5E}, // Q
-    {0x7F, 0x09, 0x19, 0x29, 0x46}, // R
-    {0x46, 0x49, 0x49, 0x49, 0x31}, // S
-    {0x01, 0x01, 0x7F, 0x01, 0x01}, // T
-    {0x3F, 0x40, 0x40, 0x40, 0x3F}, // U
-    {0x1F, 0x20, 0x40, 0x20, 0x1F}, // V
-    {0x3F, 0x40, 0x38, 0x40, 0x3F}, // W
-    {0x63, 0x14, 0x08, 0x14, 0x63}, // X
-    {0x07, 0x08, 0x70, 0x08, 0x07}, // Y
-    {0x61, 0x51, 0x49, 0x45, 0x43}, // Z
-};
+static int my_abs(int x) {
+    return (x < 0) ? -x : x;
+}
 
-static int abs(int n) { return (n < 0) ? -n : n; }
-
+// Important Basic Drawings 
 void vga_clear_screen(uint8_t color) {
-    int total = SCREEN_WIDTH * SCREEN_HEIGHT;
-    // Treating buffer as 8-bit pointer for byte access
-    for (int i = 0; i < total; i++) {
+    for (int i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; i++) {
         pVGA_PIXEL_BUFFER[i] = color;
     }
 }
 
 void vga_draw_pixel(int x, int y, uint8_t color) {
     if (x >= 0 && x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT) {
-        pVGA_PIXEL_BUFFER[(y * SCREEN_WIDTH) + x] = color;
+        pVGA_PIXEL_BUFFER[y * SCREEN_WIDTH + x] = color;
     }
 }
 
 void vga_draw_line(int x0, int y0, int x1, int y1, uint8_t color) {
-    int dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
-    int dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
-    int err = dx + dy, e2;
+    int dx = my_abs(x1 - x0);
+    int dy = my_abs(y1 - y0);
+    int sx = (x0 < x1) ? 1 : -1;
+    int sy = (y0 < y1) ? 1 : -1;
+    int err = dx - dy;
+
     while (1) {
         vga_draw_pixel(x0, y0, color);
         if (x0 == x1 && y0 == y1) break;
-        e2 = 2 * err;
-        if (e2 >= dy) { err += dy; x0 += sx; }
-        if (e2 <= dx) { err += dx; y0 += sy; }
+        int e2 = 2 * err;
+        if (e2 > -dy) { err -= dy; x0 += sx; }
+        if (e2 < dx)  { err += dx; y0 += sy; }
     }
 }
 
-// Dashed line for Grid (matches scope image style)
 void vga_draw_dashed_line(int x0, int y0, int x1, int y1, uint8_t color) {
-    int dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
-    int dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
-    int err = dx + dy, e2;
-    int pixel_count = 0;
-    
+    int dx = my_abs(x1 - x0);
+    int dy = my_abs(y1 - y0);
+    int sx = (x0 < x1) ? 1 : -1;
+    int sy = (y0 < y1) ? 1 : -1;
+    int err = dx - dy;
+    int count = 0;
+
     while (1) {
-        // Dash pattern: 2 pixels on, 4 pixels off
-        if (pixel_count % 6 < 2) { 
+        if ((count % 8) < 3) {
             vga_draw_pixel(x0, y0, color);
         }
-        pixel_count++;
-
+        count++;
         if (x0 == x1 && y0 == y1) break;
-        e2 = 2 * err;
-        if (e2 >= dy) { err += dy; x0 += sx; }
-        if (e2 <= dx) { err += dx; y0 += sy; }
+        int e2 = 2 * err;
+        if (e2 > -dy) { err -= dy; x0 += sx; }
+        if (e2 < dx)  { err += dx; y0 += sy; }
     }
 }
 
 void vga_draw_rect(int x, int y, int w, int h, uint8_t color) {
-    vga_draw_line(x, y, x + w, y, color);
-    vga_draw_line(x, y + h, x + w, y + h, color);
-    vga_draw_line(x, y, x, y + h, color);
-    vga_draw_line(x + w, y, x + w, y + h, color);
+    for (int i = x; i < x + w; i++) {
+        vga_draw_pixel(i, y, color);
+        vga_draw_pixel(i, y + h - 1, color);
+    }
+    for (int i = y; i < y + h; i++) {
+        vga_draw_pixel(x, i, color);
+        vga_draw_pixel(x + w - 1, i, color);
+    }
 }
 
 void vga_draw_filled_rect(int x, int y, int w, int h, uint8_t color) {
-    for (int curr_y = y; curr_y < (y + h); curr_y++) {
-        for (int curr_x = x; curr_x < (x + w); curr_x++) {
-            vga_draw_pixel(curr_x, curr_y, color);
+    for (int row = y; row < y + h; row++) {
+        for (int col = x; col < x + w; col++) {
+            vga_draw_pixel(col, row, color);
         }
     }
 }
 
-// Text Drawing - CORRECTED ORIENTATION
-void vga_draw_char(int x, int y, char c, uint8_t color) {
-    if (c < 32 || c > 90) c = 32; // basic bounds check
-    int index = c - 32;
-    for (int col = 0; col < 5; col++) {
-        uint8_t line = font5x7[index][col];
-        for (int row = 0; row < 7; row++) {
-            if (line & (1 << row)) { 
-                // FIXED: 'row' increases downwards. LSB (bit 0) is top pixel.
-                vga_draw_pixel(x + col, y + row, color); 
+
+
+// Gain and labels 
+void vga_draw_grid(void) {
+    int div_w = GRAPH_W / GRID_DIVS_X;
+    int div_h = GRAPH_H / GRID_DIVS_Y;
+    
+    // Border
+    vga_draw_rect(GRAPH_X, GRAPH_Y, GRAPH_W, GRAPH_H, COLOR_WHITE);
+    
+    // Vertical grid lines
+    for (int i = 1; i < GRID_DIVS_X; i++) {
+        int x = GRAPH_X + i * div_w;
+        vga_draw_dashed_line(x, GRAPH_Y + 1, x, GRAPH_Y + GRAPH_H - 2, COLOR_GRID);
+    }
+    
+    // Horizontal grid lines
+    for (int i = 1; i < GRID_DIVS_Y; i++) {
+        int gy = GRAPH_Y + i * div_h;
+        vga_draw_dashed_line(GRAPH_X + 1, gy, GRAPH_X + GRAPH_W - 2, gy, COLOR_GRID);
+    }
+}
+
+void vga_draw_labels(void) {
+    // Y-axis voltage labels
+    vga_draw_string(5, GRAPH_Y - 2,               "3.3", COLOR_WHITE);
+    vga_draw_string(5, GRAPH_Y + GRAPH_H/4 - 3,   "2.5", COLOR_WHITE);
+    vga_draw_string(5, GRAPH_Y + GRAPH_H/2 - 3,   "1.6", COLOR_WHITE);
+    vga_draw_string(5, GRAPH_Y + 3*GRAPH_H/4 - 3, "0.8", COLOR_WHITE);
+    vga_draw_string(5, GRAPH_Y + GRAPH_H - 7,     "0.0", COLOR_WHITE);
+    
+    // X-axis time labels
+    vga_draw_string(GRAPH_X, SCREEN_HEIGHT - 12, "0", COLOR_WHITE);
+    vga_draw_string(GRAPH_X + GRAPH_W - 30, SCREEN_HEIGHT - 12, "50ms", COLOR_WHITE);
+}
+
+
+
+// Header and Footer drawing : Showing voltage, gain, sample rate, max, min 
+void vga_draw_header(float voltage, float v_max, float v_min, int gain, int sample_rate) {
+    // Clear header
+    vga_draw_filled_rect(0, 0, SCREEN_WIDTH, TOP_MARGIN - 2, COLOR_BLACK);
+    
+    // CH1 voltage
+    vga_draw_string(2, 5, "CH1:", COLOR_YELLOW);
+    vga_draw_float(30, 5, voltage, COLOR_YELLOW);
+    vga_draw_char(62, 5, 'V', COLOR_YELLOW);
+    
+    // Gain
+    vga_draw_string(80, 5, "G:", COLOR_CYAN);
+    vga_draw_int(95, 5, gain, COLOR_CYAN);
+    
+    // Sample rate
+    vga_draw_string(115, 5, "R:", COLOR_CYAN);
+    vga_draw_int(130, 5, sample_rate, COLOR_CYAN);
+    
+    // Max
+    vga_draw_string(175, 5, "Max:", COLOR_GREEN);
+    vga_draw_float(205, 5, v_max, COLOR_GREEN);
+    
+    // Min
+    vga_draw_string(250, 5, "Min:", COLOR_RED);
+    vga_draw_float(280, 5, v_min, COLOR_RED);
+}
+
+void vga_draw_footer(void) {
+    vga_draw_string(90, SCREEN_HEIGHT - 12, "DE10-Lite Oscilloscope", COLOR_GRID);
+}
+
+
+
+// Update display for when gain or rate changes 
+void vga_update_settings(int gain, int sample_rate) {
+    // Just update the gain and rate portion of header
+    vga_draw_filled_rect(80, 5, 80, 8, COLOR_BLACK);
+    
+    vga_draw_string(80, 5, "G:", COLOR_CYAN);
+    vga_draw_int(95, 5, gain, COLOR_CYAN);
+    
+    vga_draw_string(115, 5, "R:", COLOR_CYAN);
+    vga_draw_int(130, 5, sample_rate, COLOR_CYAN);
+}
+
+
+
+// INITIALIZATION
+void vga_init_scope(int gain, int sample_rate) {
+    vga_clear_screen(COLOR_BLACK);
+    vga_draw_grid();
+    vga_draw_labels();
+    vga_draw_header(0.0f, 0.0f, 0.0f, gain, sample_rate);
+    vga_draw_footer();
+}
+
+
+
+// Displaying waveform as screen values 
+int vga_voltage_to_y(float voltage, float v_min, float v_max) {
+    if (voltage < v_min) voltage = v_min;
+    if (voltage > v_max) voltage = v_max;
+    
+    float percent = (voltage - v_min) / (v_max - v_min);
+    int y = GRAPH_Y + GRAPH_H - 1 - (int)(percent * (GRAPH_H - 2));
+    
+    if (y < GRAPH_Y + 1) y = GRAPH_Y + 1;
+    if (y > GRAPH_Y + GRAPH_H - 2) y = GRAPH_Y + GRAPH_H - 2;
+    
+    return y;
+}
+
+
+void vga_get_graph_area(int *left, int *right, int *top, int *bottom) {
+    if (left)   *left   = GRAPH_X + 1;
+    if (right)  *right  = GRAPH_X + GRAPH_W - 2;
+    if (top)    *top    = GRAPH_Y + 1;
+    if (bottom) *bottom = GRAPH_Y + GRAPH_H - 2;
+}
+
+void vga_clear_column(int x) {
+    if (x <= GRAPH_X || x >= GRAPH_X + GRAPH_W - 1) return;
+    
+    // Clear column
+    for (int y = GRAPH_Y + 1; y < GRAPH_Y + GRAPH_H - 1; y++) {
+        vga_draw_pixel(x, y, COLOR_BLACK);
+    }
+    
+    // Restore grid
+    int div_w = GRAPH_W / GRID_DIVS_X;
+    int div_h = GRAPH_H / GRID_DIVS_Y;
+    int col_offset = x - GRAPH_X;
+    
+    // Vertical grid line
+    if (col_offset > 0 && col_offset % div_w == 0) {
+        for (int y = GRAPH_Y + 1; y < GRAPH_Y + GRAPH_H - 1; y++) {
+            if ((y - GRAPH_Y) % 8 < 3) {
+                vga_draw_pixel(x, y, COLOR_GRID);
+            }
+        }
+    }
+    
+    // Horizontal grid lines
+    for (int i = 1; i < GRID_DIVS_Y; i++) {
+        int gy = GRAPH_Y + i * div_h;
+        if (col_offset % 8 < 3) {
+            vga_draw_pixel(x, gy, COLOR_GRID);
+        }
+    }
+}
+
+
+
+// Pause Screen 
+void vga_show_paused(void) {
+    // Draw a box in the center with "PAUSED" text
+    int box_w = 200;
+    int box_h = 80;
+    int box_x = (SCREEN_WIDTH - box_w) / 2;
+    int box_y = (SCREEN_HEIGHT - box_h) / 2;
+    
+    // Dark background
+    vga_draw_filled_rect(box_x, box_y, box_w, box_h, COLOR_BLACK);
+    
+    // Red border
+    vga_draw_rect(box_x, box_y, box_w, box_h, COLOR_RED);
+    vga_draw_rect(box_x + 1, box_y + 1, box_w - 2, box_h - 2, COLOR_RED);
+    
+    // "PAUSED" text centered
+    vga_draw_string(box_x + 80, box_y + 25, "PAUSED", COLOR_RED);
+    
+    // "Press BTN" below
+    vga_draw_string(box_x + 35, box_y + 50, "Press BTN To Continue", COLOR_WHITE);
+}
+void vga_hide_paused(void) {
+    // Clear the pause box area and redraw grid
+    int box_w = 100;
+    int box_h = 40;
+    int box_x = (SCREEN_WIDTH - box_w) / 2;
+    int box_y = (SCREEN_HEIGHT - box_h) / 2;
+    
+    // Clear box
+    vga_draw_filled_rect(box_x - 2, box_y - 2, box_w + 4, box_h + 4, COLOR_BLACK);
+    
+    // Redraw affected grid lines
+    int div_w = GRAPH_W / GRID_DIVS_X;
+    int div_h = GRAPH_H / GRID_DIVS_Y;
+    
+    // Redraw vertical lines in the cleared area
+    for (int i = 1; i < GRID_DIVS_X; i++) {
+        int x = GRAPH_X + i * div_w;
+        if (x >= box_x - 2 && x <= box_x + box_w + 2) {
+            for (int y = box_y - 2; y < box_y + box_h + 2; y++) {
+                if (y > GRAPH_Y && y < GRAPH_Y + GRAPH_H - 1) {
+                    if ((y - GRAPH_Y) % 8 < 3) {
+                        vga_draw_pixel(x, y, COLOR_GRID);
+                    }
+                }
+            }
+        }
+    }
+    
+    // Redraw horizontal lines
+    for (int i = 1; i < GRID_DIVS_Y; i++) {
+        int gy = GRAPH_Y + i * div_h;
+        if (gy >= box_y - 2 && gy <= box_y + box_h + 2) {
+            for (int x = box_x - 2; x < box_x + box_w + 2; x++) {
+                if (x > GRAPH_X && x < GRAPH_X + GRAPH_W - 1) {
+                    if ((x - GRAPH_X) % 8 < 3) {
+                        vga_draw_pixel(x, gy, COLOR_GRID);
+                    }
+                }
             }
         }
     }
 }
 
-void vga_draw_string(int x, int y, const char *str, uint8_t color) {
-    while (*str) {
-        vga_draw_char(x, y, *str++, color);
-        x += 6; // 5px wide + 1px spacing
-    }
-}
-
-// Draw the Professional Grid UI
-void vga_draw_grid_axis(void) {
-    // These must align with margins in main.c
-    int left_margin = 30; // space for Y-axis text
-    int bottom_margin = 20; // space for X-axis text
-    int graph_w = SCREEN_WIDTH - left_margin - 10;
-    int graph_h = SCREEN_HEIGHT - bottom_margin - 20; // top margin 20
-    int top_y = 20;
-
-    // Draw main box
-    vga_draw_line(left_margin, top_y, left_margin+graph_w, top_y, COLOR_WHITE); // Top
-    vga_draw_line(left_margin, top_y+graph_h, left_margin+graph_w, top_y+graph_h, COLOR_WHITE); // Bottom
-    vga_draw_line(left_margin, top_y, left_margin, top_y+graph_h, COLOR_WHITE); // Left
-    vga_draw_line(left_margin+graph_w, top_y, left_margin+graph_w, top_y+graph_h, COLOR_WHITE); // Right
-
-    // 2. Draw Dashed Grid
-    // Vertical lines
-    for (int i = 1; i < 8; i++) {
-        int x = left_margin + (i * (graph_w / 8));
-        vga_draw_dashed_line(x, top_y + 1, x, top_y + graph_h - 1, COLOR_GRID_GRAY);
-    }
-    // Horizontal lines
-    for (int i = 1; i < 6; i++) {
-        int y = top_y + (i * (graph_h / 6));
-        vga_draw_dashed_line(left_margin + 1, y, left_margin + graph_w - 1, y, COLOR_GRID_GRAY);
-    }
-
-    // 3. Draw Axis Labels (Static for now, matching scope style)
-    // Y-Axis
-    vga_draw_string(2, top_y, "3.3", COLOR_WHITE);
-    vga_draw_string(2, top_y + graph_h/2 - 4, "1.6", COLOR_WHITE);
-    vga_draw_string(2, top_y + graph_h - 7, "0.0", COLOR_WHITE);
-
-    // X-Axis (Time)
-    vga_draw_string(left_margin, SCREEN_HEIGHT - 12, "0.0", COLOR_WHITE);
-    vga_draw_string(SCREEN_WIDTH - 40, SCREEN_HEIGHT - 12, "50ms", COLOR_WHITE);
-
-    // Footer
-    vga_draw_string(10, SCREEN_HEIGHT - 8, "Freq: 60Hz", COLOR_GRID_GRAY);
-    vga_draw_string(140, SCREEN_HEIGHT - 8, "Time (msec)", COLOR_WHITE);
-}
-
-int vga_map_voltage(float voltage, float min_v, float max_v) {
-    if (voltage < min_v) voltage = min_v;
-    if (voltage > max_v) voltage = max_v;
-    
-    // Graph area definitions (must match draw_grid_axis)
-    int top_y = 20;
-    int graph_h = SCREEN_HEIGHT - 20 - 20; 
-
-    float percentage = (voltage - min_v) / (max_v - min_v);
-    
-    // Invert Y inside the graph box
-    // top_y is 3.3V, top_y + graph_h is 0V
-    return (top_y + graph_h) - (int)(percentage * graph_h);
-}
