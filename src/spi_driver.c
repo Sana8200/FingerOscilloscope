@@ -1,9 +1,6 @@
 /**
  * Bit-banged Manual SPI driver for AD7705 ADC : SPI Mode 3: CPOL=1 (clock idle high), CPHA=1 (sample on rising edge)
- * AD7705 SPI Timing:
- * - Data is shifted out on falling edge of SCLK
- * - Data is sampled on rising edge of SCLK
- * - MSB first
+ * Data is shifted out on falling edge of SCLK, sampled on rising edge of SCLK, MSB first
  */
 
 #include "spi_driver.h"

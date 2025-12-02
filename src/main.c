@@ -1,3 +1,7 @@
+/**
+ * DE10-Lite oscilloscope using AD7705 ADC
+ */
+
 #include <stdint.h>
 #include <stdbool.h>
 #include "hardware.h"
@@ -8,117 +12,192 @@
 #include "dtekv-lib.h"
 #include "delay.h"
 
-// Configuration
-#define V_MIN  0.0f 
-#define V_MAX  3.3f 
-#define ERASE_BAR_WIDTH 8 
 
-// Screen Layout Constants (Must match vga_driver.c)
-#define LEFT_MARGIN 30
-#define RIGHT_MARGIN 10
-#define GRAPH_WIDTH (SCREEN_WIDTH - LEFT_MARGIN - RIGHT_MARGIN)
+#define V_MIN           0.0f    // Minimum voltage on display
+#define V_MAX           3.3f    // Maximum voltage on display
+#define ERASE_WIDTH     3       // Pixels to clear ahead of waveform
 
-void ftoa_simple(float f, char *buffer) {
-    int whole = (int)f;
-    int frac = (int)((f - whole) * 10); // 1 decimal place
-    if (frac < 0) frac = -frac;
-    // Manual conversion since we might lack sprintf
-    buffer[0] = '0' + (whole % 10); // Single digit support for 0-9V
-    buffer[1] = '.';
-    buffer[2] = '0' + (frac % 10);
-    buffer[3] = 'V';
-    buffer[4] = '\0';
-}
+#define DEFAULT_SAMPLE_RATE   150     // Samples per second
+#define MIN_SAMPLE_RATE  50
+#define MAX_SAMPLE_RATE 500
+
+// Graph area boundaries
+static int graph_left;
+static int graph_right;
+static int graph_top;
+static int graph_bottom;
+
+// Current and previous drawing positions
+static int pos_x;
+static int prev_x;
+static int prev_y;
+
+// Statistics
+static float sweep_min;
+static float sweep_max;
+static int sweep_count;
+
+static int current_gain = 1;
+static int current_sample_rate = DEFAULT_SAMPLE_RATE;
+static bool is_paused = false;
+static int prev_switches = 0;   
+
+
+
 
 int main(void) {
-    display_string("\n=== OSCILLOSCOPE START ===\n");
+    display_string("\n");
+    display_string("======================================== DE10-Lite Oscilloscope ========================================\n\n");
+    display_string("Controls:\n");
+    display_string("  Button  : Pause/Resume\n");
+    display_string("  SW2     : Gain = 2\n");
+    display_string("  SW3     : Gain = 4\n");
+    display_string("  SW4     : Gain = 8\n");
+    display_string("  SW8     : Sample Rate -50\n");
+    display_string("  SW9     : Sample Rate +50\n\n");
 
-    // Init Hardware
-    timer_init(200);
-    //spi_init();
-    delay_ms(50);
-    //ad7705_init(CHN_AIN1);
-    delay_ms(100);
-
-    // Setup Screen UI
-    vga_clear_screen(COLOR_BLACK);
-    vga_draw_grid_axis();
+    display_string("Init Timer...\n");
+    timer_init(current_sample_rate);
     
-    // Draw Header
-    vga_draw_string(30, 5, "CH1 =", COLOR_YELLOW); // Label
-    vga_draw_string(150, 5, "PRO-SCOPE V1.0", COLOR_BLUE);
+    display_string("Init SPI...\n");
+    spi_init();
+    delay_ms(50);
+    
+    display_string("Init ADC...\n");
+    ad7705_init(CHN_AIN1);
+    delay_ms(100);
+    
+    display_string("Init VGA...\n");
+    vga_init_scope(current_gain, current_sample_rate);
+    vga_get_graph_area(&graph_left, &graph_right, &graph_top, &graph_bottom);
+    
 
-    int x_index = 0; // 0 to GRAPH_WIDTH
-    int prev_x = LEFT_MARGIN;
-    int prev_y = SCREEN_HEIGHT / 2;
-    char text_buf[8];
-
+    // Initialize variables 
+    pos_x = graph_left;
+    prev_x = graph_left;
+    prev_y = (graph_top + graph_bottom) / 2;
+    sweep_min = V_MAX;
+    sweep_max = V_MIN;
+    sweep_count = 0;
+    
+    display_string("\nReady!\n\n");
+    set_leds(0x001);
+    display_7seg_voltage_gain(0.0f, current_gain);
+    
     while (1) {
-        // --- Read ADC ---
+        if (get_btn()) {
+            // Wait until button is RELEASED
+            while (get_btn()) {
+                delay_ms(10);
+            }
+            delay_ms(50); // Debounce
+            // Toggle Pause State
+            is_paused = !is_paused;
+
+            if (is_paused) {
+                vga_show_paused();
+                set_leds(0x3FF); // All LEDs on
+            } else {
+                vga_hide_paused();
+                set_leds(0x001);
+            }
+        }
+        
+        // 2. PAUSE LOGIC
+        if (is_paused) {
+            delay_ms(50); // Idle
+            continue;     // Skip the rest of the loop
+        }
+        
+        // Handle gain switches (SW2, SW3, SW4)
+        int new_gain = read_gain_from_switches(get_sw());
+        if(new_gain != current_gain){
+            current_gain = new_gain;
+            ad7705_set_gain(CHN_AIN1, current_gain);
+            vga_update_settings(current_gain, current_sample_rate);
+        }
+
+        // Handle smaple rate switches (SW8, SW9)(SW9 increase, SW8 decrease)
+        if (switch_pressed(get_sw(), prev_switches, 0x200)) {
+            if (current_sample_rate < MAX_SAMPLE_RATE) {
+                current_sample_rate += 50;
+                timer_init(current_sample_rate);
+                vga_update_settings(current_gain, current_sample_rate);
+                set_leds(0x200);
+            }
+        }
+        if (switch_pressed(get_sw(), prev_switches, 0x100)) {
+            if (current_sample_rate > MIN_SAMPLE_RATE) {
+                current_sample_rate -= 50;
+                timer_init(current_sample_rate);
+                vga_update_settings(current_gain, current_sample_rate);
+                set_leds(0x100);
+            }
+        }
+        prev_switches = get_sw();
+
+        // If push button pressed and the program paused, update display but don't smaple 
+        if(is_paused){
+            display_7seg_voltage_gain(0.0f, current_gain);
+            delay_ms(50);
+            continue;
+        }
+
+        
+        // Waiting for timer tick 
+        while (!timer_check_tick()) {
+            // Wait for next sample 
+        }
+        
+        // Read ADC
         float voltage = ad7705_read_voltage(CHN_AIN1);
-        display_voltage_7seg(voltage);
 
-        // --- Update Top Status Bar (Every ~32 pixels to reduce flicker) ---
-        if (x_index % 32 == 0) {
-            // Draw a black box to erase old text
-            vga_draw_filled_rect(65, 5, 40, 8, COLOR_BLACK); 
-            ftoa_simple(voltage, text_buf);
-            vga_draw_string(65, 5, text_buf, COLOR_YELLOW);
-        }
-
-        // --- Calculate Coordinates ---
-        int current_y = vga_map_voltage(voltage, V_MIN, V_MAX);
-        int current_x = LEFT_MARGIN + x_index;
-
-        // --- Erase Future Bar ---
-        // Only erase INSIDE the graph area
-        int top_y = 20;
-        int graph_h = SCREEN_HEIGHT - 40;
+        // Update statistics
+        if (voltage < sweep_min) sweep_min = voltage;
+        if (voltage > sweep_max) sweep_max = voltage;
         
-        int erase_x_start = current_x + 1;
-        int erase_x_end = current_x + ERASE_BAR_WIDTH;
-        
-        for (int ex = erase_x_start; ex <= erase_x_end; ex++) {
-            if (ex >= (LEFT_MARGIN + GRAPH_WIDTH)) continue; // Don't erase right border
-            
-            int wrapped_ex = LEFT_MARGIN + ((ex - LEFT_MARGIN) % GRAPH_WIDTH);
-            
-            // Draw vertical black line inside graph bounds
-            vga_draw_line(wrapped_ex, top_y + 1, wrapped_ex, top_y + graph_h - 1, COLOR_BLACK);
-            
-            // Re-draw Dashed Grid lines if we erased them
-            // Vertical Grid Lines (approx every 35px inside graph)
-            if ((wrapped_ex - LEFT_MARGIN) % (GRAPH_WIDTH / 8) == 0) {
-                 vga_draw_dashed_line(wrapped_ex, top_y + 1, wrapped_ex, top_y + graph_h - 1, COLOR_GRID_GRAY);
-            }
-            // Horizontal Grid Lines need to be redrawn pixel by pixel
-            for (int i = 1; i < 6; i++) {
-                int gy = top_y + (i * (graph_h / 6));
-                // Redraw dash pattern logic: (x % 6 < 2)
-                if (wrapped_ex % 6 < 2) {
-                    vga_draw_pixel(wrapped_ex, gy, COLOR_GRID_GRAY);
-                }
-            }
-        }
+        display_7seg_voltage_gain(voltage, current_gain);
 
-        // --- Draw Waveform ---
-        if (x_index > 0) {
-            vga_draw_line(prev_x, prev_y, current_x, current_y, COLOR_ORANGE);
+    
+        
+        
+        // Erase ahead of waveform
+        for (int i = 1; i <= ERASE_WIDTH; i++) {
+            int erase_x = pos_x + i;
+            if (erase_x > graph_right) {
+                erase_x = graph_left + (erase_x - graph_right - 1);
+            }
+            vga_clear_column(erase_x);
+        }
+        
+        
+        // Draw waveform point
+        int current_y = vga_voltage_to_y(voltage, V_MIN, V_MAX);
+        if (pos_x > graph_left) {
+            vga_draw_line(prev_x, prev_y, pos_x, current_y, COLOR_ORANGE);
         } else {
-            vga_draw_pixel(current_x, current_y, COLOR_ORANGE);
-            // Fix left edge continuity
-            prev_x = current_x; 
+            vga_draw_pixel(pos_x, current_y, COLOR_ORANGE);
         }
 
-        // --- Advance ---
-        prev_x = current_x;
+
+        prev_x = pos_x;
         prev_y = current_y;
-        x_index++;
-        
-        if (x_index >= GRAPH_WIDTH) {
-            x_index = 0;
-            prev_x = LEFT_MARGIN; // Reset to left edge
+        pos_x++;
+        // Checking if Sweep is complete 
+        if (pos_x > graph_right) {
+            // End of sweep
+            pos_x = graph_left;
+            prev_x = graph_left;
+            sweep_count++;
+            
+            // Update header
+            vga_draw_header(voltage, sweep_max, sweep_min, current_gain, current_sample_rate);
+            
+            // Reset stats
+            sweep_min = V_MAX;
+            sweep_max = V_MIN;
         }
     }
+    
     return 0;
 }

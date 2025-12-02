@@ -72,8 +72,7 @@
 void ad7705_init(uint8_t channel);
 uint16_t ad7705_read_data(uint8_t channel);
 float ad7705_read_voltage(uint8_t channel);
-//bool ad7705_data_ready(uint8_t channel);
-//bool ad7705_read_data_timeout(uint8_t channel, uint16_t *data);
+void ad7705_set_gain(uint8_t channel, int gain_value);
 
 
 #endif /* AD7705_DRIVER_H */
