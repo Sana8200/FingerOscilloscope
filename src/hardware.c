@@ -1,5 +1,24 @@
 #include "hardware.h"
 
+
+static const int sev_seg_map[] = {   // Look up table for the numbers on the 7 segment display 
+    0xCF, // 0
+    0xF9, // 1
+    0xA4, // 2
+    0xB0, // 3
+    0x99, // 4
+    0x92, // 5
+    0x82, // 6
+    0xF8, // 7
+    0x80, // 8
+    0x90, // 9
+};
+
+#define SEG_MIDDLE_DASH    0xBF
+#define SEG_BOTTOM_DASH    0xF7 
+#define SEG_BLANK   0xFF 
+#define SEG_DP      0x7F  
+
 // Takes an integer and writes it to the LED base address to control the 10 LEDs.
 void set_leds(int led_mask){
     volatile int * led_pointer = (volatile int *) LED_BASE_ADDR;
@@ -9,75 +28,79 @@ void set_leds(int led_mask){
 
 // reads the status of teh push button
 int get_btn(void){
-    volatile int *push_button_pointer = (volatile int *) PUSH_BUTTON_BASE_ADDR;
-    return (*push_button_pointer) & 0x01 ;    
+    return (*pPUSH_BUTTONS) & 0x01 ;    
 }
     
 
 // Reads the status of the 10 toggle switches on the board, no parameter
 int get_sw(void){
-    volatile int *switch_pointer = (volatile int *) SWITCH_BASE_ADDR;
-    return (*switch_pointer) & 0x3FF; 
+    return (*pSWITCHES) & 0x3FF; 
 }
 
 
+// Write raw pattern to display
+void set_display_raw(int display_number, int bit_pattern) {
+    unsigned int displayer_address = SEV_SEG_DISPLAY_BASE_ADDR + (display_number * 0x10);
+    volatile int *display_pointer = (volatile int *) displayer_address;
+    *display_pointer = bit_pattern;
+}
+
 // writes a value to one of the six 7-segment displays
 void set_display( int display_number, int value){
-    static const int sev_seg_map[] = {   // Look up table for the numbers on the 7 segment display 
-        0x40, // 0
-        0x79, // 1
-        0x24, // 2
-        0x30, // 3
-        0x19, // 4
-        0x12, // 5
-        0x02, // 6
-        0x78, // 7
-        0x00, // 8
-        0x10, // 9
-    }; 
     // If the value is valid, it will look up the digit in the array to find the correct bit pattern 
     int bit_pattern;
 
     if(value >= 0 && value <= 9){
         bit_pattern = sev_seg_map[value];
     } else {
-        // Turning off all the segments for invalid numbers 
-        // bit_pattern = 0x7F;    
-
-        // for invalid numbers bigger than 9 or negative numbers show 0 on the display 
-        bit_pattern = sev_seg_map[0];            
+        bit_pattern = SEG_BLANK;               
     }
     // Calculating the address for the specified display 
-    unsigned int displayer_address = SEV_SEG_DISPLAY_BASE_ADDR + (display_number * 0x10);
-
-    volatile int *display_pointer = (volatile int *) displayer_address;
-    *display_pointer = bit_pattern; 
+    set_display_raw(display_number, bit_pattern);
 }
 
 
-// 7-Segment Display - Show voltage 
-void display_voltage_7seg(float voltage) {
-    // Display format: X.XX V
-    // HEX displays 5-0: [5][4][3][2][1][0]  => We use: [5]=tens, [4]=ones, [3]='.', [2]=tenths, [1]=hundredths, [0]=blank
+// 7-Segment Display - Show voltage and gain 
+void display_7seg_voltage_gain(float voltage, int gain) {
+    // Display format: X.XX V : HEX displays 5-0: [5][4][3][2][1][0]  => We use: [5]=tens, [4]=ones, [3]='.', [2]=tenths, [1]=dash, [0]=gain
     
     // Clamp to 0-9.99
     if (voltage < 0) voltage = 0;
     if (voltage > 9.99f) voltage = 9.99f;
     
     int v_hundredths = (int)(voltage * 100 + 0.5f);  // e.g., 1.65V -> 165
-    
     int ones = (v_hundredths / 100) % 10;
     int tenths = (v_hundredths / 10) % 10;
     int hundredths = v_hundredths % 10;
     
-    // Display on 7-segments
-    set_display(5, ones);       // Ones digit
-    set_display(4, tenths);     // Tenths
-    set_display(3, hundredths); // Hundredths
-    // Display 2, 1, 0 could show "V" or be blank
-    set_display(2, 0);
-    set_display(1, 0);
-    set_display(0, 0);
+    set_display(5, ones);       
+    set_display_raw(4, SEG_DP);   
+    set_display(3, tenths); 
+    set_display(2, hundredths);
+    set_display_raw(1, SEG_MIDDLE_DASH);   
+    set_display(0, gain);
 }
 
 
+// checks if a switch just pressed (rising edge)
+bool switch_pressed(int current, int previous, int bit) {
+    return (current & bit) && !(previous & bit);
+}
+
+// Check Switches for gain change 
+int read_gain_from_switches(int switches) {
+    if (switches & 0x08) {        // Switch 3 (bit 3) = Gain 4
+        set_leds(0x08);
+        return 4;
+        
+    } else if (switches & 0x04) { // Switch 2 (bit 2) = Gain 2
+        set_leds(0x04);
+        return 2;
+        
+    } else if (switches & 0x10){  // Switch 4 (bit 4) = Gain 8
+        set_leds(0x10);
+        return 8;
+        
+    }
+    return 1;  // Default gain
+} 
