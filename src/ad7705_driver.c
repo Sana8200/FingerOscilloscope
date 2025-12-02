@@ -7,10 +7,9 @@ static void write_byte(uint8_t data);
 static void set_next_operation(uint8_t reg, uint8_t channel, bool read);
 static void write_clock_register(uint8_t channel, uint8_t clkdis, uint8_t clkdiv, uint8_t clk, uint8_t update_rate);
 static void write_setup_register(uint8_t channel, uint8_t mode, uint8_t gain, uint8_t b_u, uint8_t buf, uint8_t fsync);
-static bool check_drdy_register(uint8_t channel);
-void self_cal_timout(int timeout, uint8_t channel);
-
-
+static bool check_drdy(uint8_t channel);
+void timeout(int timeout, uint8_t channel);
+static uint8_t current_gain_setting = GAIN_1;
 
 // Initialize the AD7705 ADC
 void ad7705_init(uint8_t channel) {
@@ -27,16 +26,17 @@ void ad7705_init(uint8_t channel) {
     // Configure Clock Register: CLKDIS=0 (clock enabled), CLKDIV (division), CLK=1 (MCLK > 2MHz), update rate
     write_clock_register(channel, 0, 1, 1, UPDATE_RATE_500);
                                   
-    // Configure Setup Register: Mode = Self-Cal, Gain = 1, Unipolar, Unbuffered
-    write_setup_register(channel, MODE_SELF_CAL, GAIN_1, UNIPOLAR, 0, 0);                   
+    // Configure Setup Register: Mode = Self-Cal, Gain, Unipolar, Unbuffered
+    write_setup_register(channel, MODE_SELF_CAL, GAIN_1, UNIPOLAR, 0, 0);    
+    current_gain_setting = GAIN_1;               
     
     // Watiting for adc to start calibration and stabilize 
     delay_ms(10);  
     
     // Wait for self-calibration to complete: DRDY goes low when calibration is done - page 18 doc
     display_string("Waiting for ad7705 for self-calibration...\n");
-    self_cal_timout(500000, channel);
-    display_string("AD7705 init complete\n");
+    timeout(500000, channel);
+    display_string("ADC init complete.\n");
 }
 
 
@@ -44,9 +44,8 @@ void ad7705_init(uint8_t channel) {
 // Read and return raw 16-bit ADC data from specified channel, Blocks until data is ready
 uint16_t ad7705_read_data(uint8_t channel) {
     // Wait for data ready
-    while (!check_drdy_register(channel)) {       
-        // busy wait 
-    }
+    timeout(100000, channel);
+
     set_next_operation(REG_DATA, channel, true);  // read Data Register
     
     // Read 16-bit data (MSB first)
@@ -58,6 +57,32 @@ uint16_t ad7705_read_data(uint8_t channel) {
     return ((uint16_t)high_byte << 8) | low_byte;  
 }
 
+
+// This can be called to change the gain without init 
+void ad7705_set_gain(uint8_t channel, int gain_value) {
+    uint8_t gain_setting;
+    
+    // Convert gain values to register setting
+    switch (gain_value) {
+        case 1:   gain_setting = GAIN_1;   break;
+        case 2:   gain_setting = GAIN_2;   break;
+        case 4:   gain_setting = GAIN_4;   break;
+        case 8:   gain_setting = GAIN_8;   break;
+        case 16:  gain_setting = GAIN_16;  break;
+        case 32:  gain_setting = GAIN_32;  break;
+        case 64:  gain_setting = GAIN_64;  break;
+        case 128: gain_setting = GAIN_128; break;
+        default:  gain_setting = GAIN_1;   break;
+    }
+    if (gain_setting == current_gain_setting) {
+        return;
+    }    
+    current_gain_setting = gain_setting;
+    // Write new setup with self-calibration, recalibrates with the new gain
+    write_setup_register(channel, MODE_SELF_CAL, gain_setting, UNIPOLAR, 0, 0);
+    delay_ms(10);
+    timeout(100000, channel);
+}
 
 /**
  * Convert raw ADC value to voltage
@@ -142,59 +167,27 @@ static void write_setup_register(uint8_t channel, uint8_t mode, uint8_t gain, ui
 }
 
 
-/**
- * Check if data is ready by reading the Communication Register
- * DRDY bit (bit 7) = 0 means data ready (active low)
- */
-static bool check_drdy_register(uint8_t channel) {
-    set_next_operation(REG_CMM, channel, true);  // Read communication register
+
+// Check if data is ready by reading the Communication Register: DRDY bit (bit 7) = 0 means data ready (active low)
+static bool check_drdy(uint8_t channel) {
+    set_next_operation(REG_CMM, channel, true);
     
     spi_select_chip();
-    uint8_t status = spi_transfer_byte(0x00); // sending a dummy byte to keep the clock running to get the chip current status 
+    uint8_t status = spi_transfer_byte(0x00);
     spi_deselect_chip();
     
-    return (status & 0x80) == 0;  
+    return (status & 0x80) == 0;
 }
 
 
 
-void self_cal_timout(int timeout, uint8_t channel){
+void timeout(int timeout, uint8_t channel){
     while (timeout > 0) {
-        if (check_drdy_register(channel)) {
+        if (check_drdy(channel)) {
             break;
         }
         timeout--;
     } 
-    if (timeout == 0) {
-        display_string("!!! ERROR: Cal timeout!\n");
-    } else {
-        display_string("---> Calibration done!\n");
-    }
 }
 
 
-
-
-
-
-/*
-// Read ADC data with timeout (non-blocking)
-bool ad7705_read_data_timeout(uint8_t channel, uint16_t *data) {
-    int timeout = 100000;    
-    while (timeout > 0) {
-        if (check_drdy_register(channel)) {
-            *data = ad7705_read_data(channel);
-            return true;
-        }
-        timeout--;
-    }
-    return false;
-}
-*/
-
-/*
-// Check if data is ready without blocking
-bool ad7705_data_ready(uint8_t channel) {
-    return check_drdy_register(channel);
-}
-*/
