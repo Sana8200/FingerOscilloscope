@@ -1,39 +1,8 @@
 #include "performance_counter.h"
 #include "dtekv-lib.h"
 
-/**
- * Clear all performance counters to zero
- */
-void perf_clear_counters(void) {
-    asm volatile ("csrw mcycle, x0");
-    asm volatile ("csrw minstret, x0");
-    asm volatile ("csrw mhpmcounter3, x0");
-    asm volatile ("csrw mhpmcounter4, x0");
-    asm volatile ("csrw mhpmcounter5, x0");
-    asm volatile ("csrw mhpmcounter6, x0");
-    asm volatile ("csrw mhpmcounter7, x0");
-    asm volatile ("csrw mhpmcounter8, x0");
-    asm volatile ("csrw mhpmcounter9, x0");
-}
+// Print all raw counter values
 
-/**
- * Read all performance counters
- */
-void perf_read_counters(perf_counters_t *counters) {
-    asm volatile ("csrr %0, mcycle"       : "=r"(counters->cycles));
-    asm volatile ("csrr %0, minstret"     : "=r"(counters->instructions));
-    asm volatile ("csrr %0, mhpmcounter3" : "=r"(counters->mem_instr));
-    asm volatile ("csrr %0, mhpmcounter4" : "=r"(counters->icache_miss));
-    asm volatile ("csrr %0, mhpmcounter5" : "=r"(counters->dcache_miss));
-    asm volatile ("csrr %0, mhpmcounter6" : "=r"(counters->icache_stall));
-    asm volatile ("csrr %0, mhpmcounter7" : "=r"(counters->dcache_stall));
-    asm volatile ("csrr %0, mhpmcounter8" : "=r"(counters->hazard_stall));
-    asm volatile ("csrr %0, mhpmcounter9" : "=r"(counters->alu_stall));
-}
-
-/**
- * Print all raw counter values
- */
 void perf_print_counters(perf_counters_t *counters) {
     print("\n===== Performance Counters =====\n");
     
@@ -67,10 +36,9 @@ void perf_print_counters(perf_counters_t *counters) {
     print("================================\n");
 }
 
-/**
- * Print derived metrics
- * Note: Since we don't have floating point printf, we print integer percentages
- */
+
+// Print derived metrics
+
 void perf_print_metrics(perf_counters_t *c) {
     print("\n===== Derived Metrics =====\n");
     
@@ -79,7 +47,7 @@ void perf_print_metrics(perf_counters_t *c) {
     print("Exec Time (ms): ");
     print_dec(exec_time_ms);
     
-    // IPC * 100 (to show as percentage, e.g., 82 means IPC = 0.82)
+    // IPC * 100 (e.g., 73 means IPC = 0.73)
     uint32_t ipc_x100 = 0;
     if (c->cycles > 0) {
         ipc_x100 = (c->instructions * 100) / c->cycles;
@@ -129,7 +97,7 @@ void perf_print_metrics(perf_counters_t *c) {
     print("ALU Stall %:    ");
     print_dec(alu_stall_pct);
     
-    // Memory intensity (% of instructions that are memory ops)
+    // Memory intensity
     uint32_t mem_intensity = 0;
     if (c->instructions > 0) {
         mem_intensity = (c->mem_instr * 100) / c->instructions;
@@ -139,6 +107,3 @@ void perf_print_metrics(perf_counters_t *c) {
     
     print("===========================\n");
 }
-
-
-
