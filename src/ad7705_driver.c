@@ -2,18 +2,20 @@
 #include "spi_driver.h"
 #include "dtekv-lib.h"
 #include "delay.h"
+#include "hardware.h"
+
 
 static void write_byte(uint8_t data);
 static void set_next_operation(uint8_t reg, uint8_t channel, bool read);
 static void write_clock_register(uint8_t channel, uint8_t clkdis, uint8_t clkdiv, uint8_t clk, uint8_t update_rate);
 static void write_setup_register(uint8_t channel, uint8_t mode, uint8_t gain, uint8_t b_u, uint8_t buf, uint8_t fsync);
 static bool check_drdy(uint8_t channel);
-void timeout(int timeout, uint8_t channel);
+int timeout(int timeout, uint8_t channel);
 static uint8_t current_gain_setting = GAIN_1;
 
 // Initialize the AD7705 ADC
 void ad7705_init(uint8_t channel) {
-    display_string("AD7705 init start\n");
+    //display_string("AD7705 init start");
     
     // Hardware reset
     spi_reset_pin(false);   // Assert reset (active low)
@@ -34,9 +36,13 @@ void ad7705_init(uint8_t channel) {
     delay_ms(10);  
     
     // Wait for self-calibration to complete: DRDY goes low when calibration is done - page 18 doc
-    display_string("Waiting for ad7705 for self-calibration...\n");
-    timeout(500000, channel);
-    display_string("ADC init complete.\n");
+    display_string("Waiting for ad7705 for self-calibration...");
+    if (timeout(500000, channel) != ADC_OK) {
+        display_string("ADC init FAILED - timeout!\n");
+        set_leds(0x3FF);  
+        while(1);  // can't continue without ADC
+    }
+    //display_string("ADC init complete.");
 }
 
 
@@ -44,7 +50,10 @@ void ad7705_init(uint8_t channel) {
 // Read and return raw 16-bit ADC data from specified channel, Blocks until data is ready
 uint16_t ad7705_read_data(uint8_t channel) {
     // Wait for data ready
-    timeout(100000, channel);
+    if (timeout(100000, channel) != ADC_OK) {
+        display_string("ADC read timeout\n");
+        return 32768;   /// mid-scale value on timeout 
+    }
 
     set_next_operation(REG_DATA, channel, true);  // read Data Register
     
@@ -81,7 +90,10 @@ void ad7705_set_gain(uint8_t channel, int gain_value) {
     // Write new setup with self-calibration, recalibrates with the new gain
     write_setup_register(channel, MODE_SELF_CAL, gain_setting, UNIPOLAR, 0, 0);
     delay_ms(10);
-    timeout(100000, channel);
+    if (timeout(100000, channel) != ADC_OK) {
+        display_string("Gain change failed\n");
+        current_gain_setting = GAIN_1;
+    }
 }
 
 /**
@@ -181,13 +193,15 @@ static bool check_drdy(uint8_t channel) {
 
 
 
-void timeout(int timeout, uint8_t channel){
+int timeout(int timeout, uint8_t channel) {
     while (timeout > 0) {
         if (check_drdy(channel)) {
-            break;
+            return ADC_OK;
         }
         timeout--;
-    } 
+    }
+    display_string("ADC TIMEOUT!\n");
+    return ADC_TIMEOUT;
 }
 
 
