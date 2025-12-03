@@ -69,6 +69,12 @@
 #define CLOCK_CONFIG      0x0C    // CLK=1, CLKDIV=0, update rate=0
 
 
+// For errors
+#define ADC_OK             0
+#define ADC_TIMEOUT       -1
+#define ADC_INIT_FAILED   -2
+
+
 void ad7705_init(uint8_t channel);
 uint16_t ad7705_read_data(uint8_t channel);
 float ad7705_read_voltage(uint8_t channel);
