@@ -3,10 +3,9 @@
 
 #include <stdint.h>
 
-/**
- * Performance counter data structure
- * Holds all 9 hardware performance counters from the DTEK-V board
- */
+
+// Performance counter data structure : Holds all 9 hardware performance counters from the DTEK-V board
+
 typedef struct {
     uint32_t cycles;          // mcycle - Clock cycles elapsed
     uint32_t instructions;    // minstret - Instructions retired
@@ -20,10 +19,11 @@ typedef struct {
 } perf_counters_t;
 
 
-void perf_clear_counters(void);
-void perf_read_counters(perf_counters_t *counters);
+extern void perf_clear_counters(void);
+extern void perf_read_counters(perf_counters_t *counters);
+
 void perf_print_counters(perf_counters_t *counters);
 void perf_print_metrics(perf_counters_t *counters);
-void run_performance_test(void);
+
 
 #endif /* PERF_COUNTERS_H */
