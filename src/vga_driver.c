@@ -4,8 +4,7 @@
 static uint8_t vertical_grid_x[GRID_DIVS_X];
 static uint8_t horizontal_grid_y[GRID_DIVS_Y];
 
-
-
+// helper absolute value function 
 static int my_abs(int x) {
     return (x < 0) ? -x : x;
 }
@@ -17,11 +16,14 @@ void vga_clear_screen(uint8_t color) {
     }
 }
 
+// Drawing only one pixel
 void vga_draw_pixel(int x, int y, uint8_t color) {
     if (x >= 0 && x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT) {
         pVGA_PIXEL_BUFFER[y * SCREEN_WIDTH + x] = color;
     }
 }
+
+
 
 void vga_draw_line(int x0, int y0, int x1, int y1, uint8_t color) {
     int dx = my_abs(x1 - x0);
@@ -203,7 +205,7 @@ void vga_clear_column(int x) {
 // Pause Screen 
 void vga_show_paused(void) {
     // Draw a box in the center with "PAUSED" text
-    int box_w = 200;
+    int box_w = 150;
     int box_h = 80;
     int box_x = (SCREEN_WIDTH - box_w) / 2;
     int box_y = (SCREEN_HEIGHT - box_h) / 2;
@@ -216,10 +218,10 @@ void vga_show_paused(void) {
     vga_draw_rect(box_x + 1, box_y + 1, box_w - 2, box_h - 2, COLOR_RED);
     
     // "PAUSED" text centered
-    vga_draw_string(box_x + 80, box_y + 25, "PAUSED", COLOR_RED);
+    vga_draw_string(box_x + 50, box_y + 25, "PAUSED", COLOR_RED);
     
     // "Press BTN" below
-    vga_draw_string(box_x + 35, box_y + 50, "Press BTN To Continue", COLOR_WHITE);
+    vga_draw_string(box_x + 15, box_y + 50, "Press BTN To Continue", COLOR_WHITE);
 }
 void vga_hide_paused(void) {
     int box_w = 200;
