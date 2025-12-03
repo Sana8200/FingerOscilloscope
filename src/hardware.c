@@ -95,11 +95,11 @@ bool switch_pressed(int current, int previous, int bit) {
 
 // Check Switches for gain change 
 int read_gain_from_switches(int switches) {
-    if (switches & 0x08) {        // Switch 3 (bit 3) = Gain 4
+    if (switches & SW3_GAIN4) {       
         return 4;
-    } else if (switches & 0x04) { // Switch 2 (bit 2) = Gain 2
+    } else if (switches & SW2_GAIN2) { 
         return 2; 
-    } else if (switches & 0x10){  // Switch 4 (bit 4) = Gain 8
+    } else if (switches & SW4_GAIN8){  
         return 8;     
     }
     return 1;  // Default gain
