@@ -23,6 +23,10 @@
 #define GRAPH_W         (SCREEN_WIDTH - LEFT_MARGIN - RIGHT_MARGIN)
 #define GRAPH_H         (SCREEN_HEIGHT - TOP_MARGIN - BOTTOM_MARGIN)
 
+
+#define GRID_LINE_SIZE  ((GRAPH_W / (GRAPH_W / GRID_DIVS_X)) + (GRAPH_H / (GRAPH_H / GRID_DIVS_Y)))
+
+
 // Number of grid divisions
 #define GRID_DIVS_X     10
 #define GRID_DIVS_Y     8
@@ -57,6 +61,7 @@ void vga_draw_int(int x, int y, int value, uint8_t color);
 void vga_draw_float(int x, int y, float value, uint8_t color);
 
 void vga_draw_grid(void);
+void vga_init_grid_cache(void);
 void vga_draw_labels(void);
 void vga_draw_header(float voltage, float v_max, float v_min, int gain, int sample_rate);
 void vga_draw_footer(void);
@@ -71,6 +76,7 @@ void vga_hide_paused(void);
 int vga_voltage_to_y(float voltage, float v_min, float v_max);
 void vga_get_graph_area(int *left, int *right, int *top, int *bottom);
 void vga_clear_column(int x);
+
 
 
 #endif // VGA_DRIVER_H
