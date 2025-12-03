@@ -149,13 +149,7 @@ int main(void) {
         }
         prev_switches = get_sw();
 
-        // If push button pressed and the program paused, update display but don't smaple 
-        if(is_paused){
-            display_7seg_voltage_gain(0.0f, current_gain);
-            delay_ms(50);
-            continue;
-        }
-
+      
         
         // Waiting for timer tick 
         while (!timer_check_tick()) {
