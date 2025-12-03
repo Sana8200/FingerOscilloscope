@@ -40,8 +40,8 @@ void delay_ms(uint32_t milliseconds) {
  * cycles = nanoseconds / 33.33 = nanoseconds * 3 / 100
  * Minimum achievable delay is ~9 cycles (~300ns). (very short delay)
  */
-void delay_ns(uint64_t nanoseconds) {
-    uint32_t cycles = (uint32_t)((nanoseconds * 3) / 100);
+void delay_ns(uint32_t nanoseconds) {
+    uint32_t cycles = (nanoseconds * 3) / 100;
     if (cycles < 9) {
         cycles = 9;
     } 
