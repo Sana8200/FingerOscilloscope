@@ -1,5 +1,5 @@
 #include "hardware.h"
-
+#include "delay.h"
 
 static const int sev_seg_map[] = {   // Look up table for the numbers on the 7 segment display 
     0xCF, // 0
@@ -82,25 +82,25 @@ void display_7seg_voltage_gain(float voltage, int gain) {
 }
 
 
-// checks if a switch just pressed (rising edge)
+// checks if a switch just pressed (rising edge) with debouncing 
 bool switch_pressed(int current, int previous, int bit) {
-    return (current & bit) && !(previous & bit);
+    if ((current & bit) && !(previous & bit)) {
+        delay_ms(DEBOUNCE_DELAY_MS);  // rising edge detection for debouncing 
+        int confirmed = get_sw();  
+        return (confirmed & bit) != 0;
+    }
+    return false;
 }
+
 
 // Check Switches for gain change 
 int read_gain_from_switches(int switches) {
     if (switches & 0x08) {        // Switch 3 (bit 3) = Gain 4
-        set_leds(0x08);
         return 4;
-        
     } else if (switches & 0x04) { // Switch 2 (bit 2) = Gain 2
-        set_leds(0x04);
-        return 2;
-        
+        return 2; 
     } else if (switches & 0x10){  // Switch 4 (bit 4) = Gain 8
-        set_leds(0x10);
-        return 8;
-        
+        return 8;     
     }
     return 1;  // Default gain
 } 

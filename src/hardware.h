@@ -15,7 +15,7 @@
 #define pSWITCHES           ((volatile uint32_t *) SWITCH_BASE_ADDR)
 #define pLEDS               ((volatile uint32_t *) LED_BASE_ADDR)
 
-
+#define DEBOUNCE_DELAY_MS  50
 
 void set_leds(int led_mask);
 int get_sw(void);
