@@ -10,13 +10,12 @@
 #define VGA_BUFFER_BASE     0x08000000
 #define pVGA_PIXEL_BUFFER   ((volatile uint8_t *) VGA_BUFFER_BASE)
 
-
-// Margins around the graph
+// Calculating where osilliscope graph and box is on the screen 
+// Margins (empty spaces) around the graph
 #define LEFT_MARGIN     30
 #define RIGHT_MARGIN    5
 #define TOP_MARGIN      20
 #define BOTTOM_MARGIN   15
-
 // Graph area (calculated from margins)
 #define GRAPH_X         LEFT_MARGIN
 #define GRAPH_Y         TOP_MARGIN
@@ -28,14 +27,11 @@
 
 
 // Number of grid divisions
-#define GRID_DIVS_X     10
-#define GRID_DIVS_Y     8
+#define GRID_DIVS_X     12
+#define GRID_DIVS_Y     10
 
 
-/* COLORS (RGB332 format: RRRGGGBB)
-   Red:   bits 7-5 (0-7)
-   Green: bits 4-2 (0-7)
-   Blue:  bits 1-0 (0-3) */
+// COLORS (RGB332 format: RRRGGGBB)
 #define COLOR_BLACK     0x00    // 000 000 00
 #define COLOR_WHITE     0xFF    // 111 111 11
 #define COLOR_RED       0xE0    // 111 000 00
@@ -45,24 +41,29 @@
 #define COLOR_CYAN      0x1F    // 000 111 11
 #define COLOR_ORANGE    0xEC    // 111 011 00 
 #define COLOR_GRID      0x49    // 010 010 01 
+#define COLOR_DARK_RED  0x40
+#define COLOR_DARK_GREEN 0x08
 
 
-
+// Drawing the box for showing the osilliscope(grid, lines, basic drawings, columns, rows)
 void vga_clear_screen(uint8_t color);
 void vga_draw_pixel(int x, int y, uint8_t color);
 void vga_draw_line(int x0, int y0, int x1, int y1, uint8_t color);
 void vga_draw_dashed_line(int x0, int y0, int x1, int y1, uint8_t color);
 void vga_draw_rect(int x, int y, int w, int h, uint8_t color);
 void vga_draw_filled_rect(int x, int y, int w, int h, uint8_t color);
+void vga_draw_grid(void);
+void vga_init_grid_cache(void);
 
+
+// Drawing Strings, characters, integers 
 void vga_draw_char(int x, int y, char c, uint8_t color);
 void vga_draw_string(int x, int y, const char *str, uint8_t color);
 void vga_draw_int(int x, int y, int value, uint8_t color);
 void vga_draw_float(int x, int y, float value, uint8_t color);
-
-void vga_draw_grid(void);
-void vga_init_grid_cache(void);
 void vga_draw_labels(void);
+
+// Header and Footer of the screen 
 void vga_draw_header(float voltage, float v_max, float v_min, int gain, int sample_rate);
 void vga_draw_footer(void);
 
@@ -70,6 +71,7 @@ void vga_init_scope(int gain, int sample_rate);
 
 void vga_update_settings(int gain, int sample_rate);
 
+// For pause function push button display screen 
 void vga_show_paused(void);
 void vga_hide_paused(void);
 
