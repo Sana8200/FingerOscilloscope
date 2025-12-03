@@ -13,7 +13,7 @@ static uint32_t pio_output_state;
 
 // Minimum SPI clock half-period delay
 // AD7705 max SCLK is 5 MHz but for correction operation 3 MHZ (safe), total-period=1/3 MHz=333.33ns, half-period=333.33/2= 166.77ns
-// 500 ns creates a half period of 500ns, period = 500ns x 2 = 1000ns    frequency = 1 MHz 
+// 500 ns creates a half period of 500ns, period = 500ns x 2 = 1000ns    frequency = 1 MHz  /// we can triple it if needed 
 static void spi_delay(void) {
     delay_ns(500);
 }
@@ -21,7 +21,7 @@ static void spi_delay(void) {
 
 // Initialize SPI GPIO pins
 void spi_init(void) {
-    display_string("SPI init start...\n");
+    //display_string("SPI init start...\n");
     
     // Read current direction register
     uint32_t direction = *pGPIO_DIRECTION;
@@ -37,7 +37,7 @@ void spi_init(void) {
     pio_output_state &= ~SPI_MOSI_PIN;
     *pGPIO_DATA = pio_output_state;
     
-    display_string("SPI init done\n");
+    //display_string("SPI init done\n");
 }
 
 
