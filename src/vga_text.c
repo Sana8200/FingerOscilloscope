@@ -271,7 +271,7 @@ void vga_draw_header(float voltage, float v_max, float v_min, int gain, int samp
 }
 
 void vga_draw_footer(void) {
-    vga_draw_string(90, SCREEN_HEIGHT - 12, "DE10-Lite Oscilloscope", COLOR_GRID);
+    vga_draw_string(90, SCREEN_HEIGHT - 12, "DE10-Lite FingerOscilloscope", COLOR_GRID);
 }
 
 
