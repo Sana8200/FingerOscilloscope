@@ -47,28 +47,29 @@ static int prev_switches = 0;
 
 int main(void) {
     display_string("\n");
-    display_string("======================================== DE10-Lite Oscilloscope ========================================\n\n");
-    display_string("Controls:\n");
-    display_string("  Button  : Pause/Resume\n");
-    display_string("  SW2     : Gain = 2\n");
-    display_string("  SW3     : Gain = 4\n");
-    display_string("  SW4     : Gain = 8\n");
-    display_string("  SW8     : Sample Rate -50\n");
-    display_string("  SW9     : Sample Rate +50\n\n");
+    display_string("============================================= DE10-Lite Oscilloscope =============================================\n");
+    display_string("Controls:");
+    display_string("  Button  : Pause/Resume");
+    display_string("  SW2     : Gain = 2");
+    display_string("  SW3     : Gain = 4");
+    display_string("  SW4     : Gain = 8");
+    display_string("  SW8     : Sample Rate -50");
+    display_string("  SW9     : Sample Rate +50\n");
 
-    display_string("Init Timer...\n");
+    display_string("Init Timer...");
     timer_init(current_sample_rate);
     
-    display_string("Init SPI...\n");
+    display_string("Init SPI...");
     spi_init();
     delay_ms(50);
     
-    display_string("Init ADC...\n");
+    display_string("Init ADC...");
     ad7705_init(CHN_AIN1);
     delay_ms(100);
     
-    display_string("Init VGA...\n");
+    display_string("Init VGA...");
     vga_init_scope(current_gain, current_sample_rate);
+    vga_init_grid_cache();
     vga_get_graph_area(&graph_left, &graph_right, &graph_top, &graph_bottom);
     
 
@@ -80,7 +81,7 @@ int main(void) {
     sweep_max = V_MIN;
     sweep_count = 0;
     
-    display_string("\nReady!\n\n");
+    display_string("\nReady!\n");
     set_leds(0x001);
     display_7seg_voltage_gain(0.0f, current_gain);
     
@@ -115,7 +116,19 @@ int main(void) {
             current_gain = new_gain;
             ad7705_set_gain(CHN_AIN1, current_gain);
             vga_update_settings(current_gain, current_sample_rate);
+
+            if (current_gain == 8) {
+                set_leds(0x10);
+            } else if (current_gain == 4) {
+                set_leds(0x08);
+            } else if (current_gain == 2) {
+                set_leds(0x04);
+            } else {
+            set_leds(0x01);
+            }
         }
+
+        
 
         // Handle smaple rate switches (SW8, SW9)(SW9 increase, SW8 decrease)
         if (switch_pressed(get_sw(), prev_switches, 0x200)) {
@@ -136,13 +149,7 @@ int main(void) {
         }
         prev_switches = get_sw();
 
-        // If push button pressed and the program paused, update display but don't smaple 
-        if(is_paused){
-            display_7seg_voltage_gain(0.0f, current_gain);
-            delay_ms(50);
-            continue;
-        }
-
+      
         
         // Waiting for timer tick 
         while (!timer_check_tick()) {
