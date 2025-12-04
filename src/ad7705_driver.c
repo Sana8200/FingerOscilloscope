@@ -13,10 +13,10 @@ static bool check_drdy(uint8_t channel);
 int timeout(int timeout, uint8_t channel);
 static uint8_t current_gain_setting = GAIN_1;
 
+
 // Initialize the AD7705 ADC
 void ad7705_init(uint8_t channel) {
     //display_string("AD7705 init start");
-    
     // Hardware reset
     spi_reset_pin(false);   // Assert reset (active low)
     delay_ms(10);           
@@ -67,7 +67,11 @@ uint16_t ad7705_read_data(uint8_t channel) {
 }
 
 
-// This can be called to change the gain without init 
+/**
+ * Gain is like a zoom for small signals. It amplifies the input voltage internally
+ * This functions is being called to change the gain by user without init 
+ * Higher gain = more precision, smaller max input voltage3
+ */
 void ad7705_set_gain(uint8_t channel, int gain_value) {
     uint8_t gain_setting;
     
@@ -96,18 +100,32 @@ void ad7705_set_gain(uint8_t channel, int gain_value) {
     }
 }
 
+
 /**
  * Convert raw ADC value to voltage
- * For unipolar mode: float Voltage = (ADC_Value / 65535.0f) * VREF;
- * For bipolar mode:  float Voltage = ((ADC_Value - 32768.0f) / 32768.0f) * VREF
+ * For unipolar mode: float Voltage = (ADC_Value / 65535.0f) * VREF / gain;
+ * For bipolar mode:  float Voltage = ((ADC_Value - 32768.0f) / 32768.0f) * VREF / gain;
+ * Dividing by gain is for amplifiing, higher gains make the output voltage less noisy and precise and smooht
+ * but the disadvantage is lower maximum measurable voltage 
  */
 float ad7705_read_voltage(uint8_t channel) {
     uint16_t raw = ad7705_read_data(channel);
-    float Voltage = ((float)raw / 65535.0f) * VREF;
-    return Voltage;
+    
+    // Gain multiplier lookup table
+    static const float gain_values[] = {1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f, 64.0f, 128.0f};
+    float gain = gain_values[current_gain_setting & 0x07];
+    
+    // Base voltage calculation (with gain compensation)
+    float voltage = ((float)raw / 65535.0f) * VREF / gain;
+    
+    /** since there are internal and hardware reverence behaviour, voltgae divider and other components were reducing the signal
+     * for capturing the real signal I applied this voltage calibration factor which gained by experiments and it's just exception and 
+     * specific for this hardware 
+     *  */ 
+    voltage *= 1.5350f;
+    
+    return voltage;
 }
-
-
 
 
 // Write a single byte to the AD7705

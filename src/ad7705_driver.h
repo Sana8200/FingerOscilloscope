@@ -9,7 +9,7 @@
 
 
 // Reference Voltage in v
-#define VREF        3.3f   
+#define VREF        3.0f   
 
 
 // AD7705 Register Addresses (for Communication Register RS2-RS0 bits) - page 17 doc 

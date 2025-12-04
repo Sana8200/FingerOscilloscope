@@ -30,31 +30,31 @@
 
 
 // Grid Divisions (lines inside the box)
-#define GRID_DIVS_X     10
-#define GRID_DIVS_Y     10
+#define GRID_DIV_X     20
+#define GRID_DIV_Y     15
 
 
 // COLORS (RGB332 format: RRRGGGBB) 
 // Red:   bits 7-5 (3 bits, values 0-7)
 // Green: bits 4-2 (3 bits, values 0-7)
 // Blue:  bits 1-0 (2 bits, values 0-3)
-#define COLOR_BLACK     0x00    // 000 000 00
-#define COLOR_WHITE     0xFF    // 111 111 11
-#define COLOR_RED       0xE0    // 111 000 00
-#define COLOR_GREEN     0x1C    // 000 111 00
-#define COLOR_BLUE      0x03    // 000 000 11
-#define COLOR_YELLOW    0xFC    // 111 111 00
-#define COLOR_CYAN      0x1F    // 000 111 11
-#define COLOR_ORANGE    0xEC    // 111 011 00 
-#define COLOR_GRID      0x49    // 010 010 01 
-#define COLOR_DARK_RED  0x40
+#define COLOR_BLACK      0x00    // 000 000 00
+#define COLOR_WHITE      0xFF    // 111 111 11
+#define COLOR_RED        0xE0    // 111 000 00
+#define COLOR_GREEN      0x1C    // 000 111 00
+#define COLOR_BLUE       0x03    // 000 000 11
+#define COLOR_YELLOW     0xFC    // 111 111 00
+#define COLOR_CYAN       0x1F    // 000 111 11
+#define COLOR_ORANGE     0xEC    // 111 011 00 
+#define COLOR_GRID       0x49    // 010 010 01 
+#define COLOR_DARK_RED   0x40
 #define COLOR_DARK_GREEN 0x08
 
 
 // Basic draawing functions 
 void vga_clear_screen(uint8_t color);
 void vga_draw_pixel(int x, int y, uint8_t color);
-void vga_draw_line(int x0, int y0, int x1, int y1, uint8_t color);
+void vga_draw_line(int x0, int y0, int x1, int y1, uint8_t color, bool dashed);
 
 // Text drawing functions 
 void vga_draw_char(int x, int y, char c, uint8_t color);
@@ -67,9 +67,8 @@ void vga_init_scope(int gain, int sample_rate);
 
 // Drawing the oscilloscope display
 void vga_draw_grid(void);
-void vga_draw_labels(void);
-void vga_draw_header(float voltage, float v_max, float v_min, int gain, int sample_rate);
-void vga_draw_footer(void);
+
+void vga_draw_header_footer_labels(float voltage, float v_max, float v_min, int gain, int sample_rate);
 
 // Updating the display
 void vga_update_settings(int gain, int sample_rate);
