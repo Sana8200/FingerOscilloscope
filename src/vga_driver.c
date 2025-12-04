@@ -132,14 +132,64 @@ void vga_init_grid_cache(void) {
     }
 }
 
+// Header and Footer drawing : Showing voltage, gain, sample rate, max, min 
+void vga_draw_header_footer_labels(float voltage, float v_max, float v_min, int gain, int sample_rate) {
+    vga_draw_filled_rect(0, 0, SCREEN_WIDTH, TOP_MARGIN - 2, COLOR_BLACK);  // Clears header part ( -2 to not clear the grid border)
+      
+    // CH1 voltage
+    vga_draw_string(4, 5, "CH1:", COLOR_YELLOW);
+    vga_draw_float(30, 5, voltage, COLOR_YELLOW);
+    vga_draw_char(55, 5, 'V', COLOR_YELLOW);
+    
+    // Gain
+    vga_draw_string(80, 5, "G:", COLOR_CYAN);
+    vga_draw_int(93, 5, gain, COLOR_CYAN);
+    
+    // Sample rate
+    vga_draw_string(115, 5, "R:", COLOR_CYAN);
+    vga_draw_int(128, 5, sample_rate, COLOR_CYAN);
+    
+    // Max
+    vga_draw_string(175, 5, "Max:", COLOR_GREEN);
+    vga_draw_float(200, 5, v_max, COLOR_GREEN);
+    
+    // Min
+    vga_draw_string(250, 5, "Min:", COLOR_RED);
+    vga_draw_float(280, 5, v_min, COLOR_RED);
+    
+    // X-axis time labels
+    vga_draw_string(GRAPH_X, SCREEN_HEIGHT - 12, "0", COLOR_WHITE);
+    vga_draw_string(GRAPH_X + GRAPH_W - 30, SCREEN_HEIGHT - 12, "50ms", COLOR_WHITE);
+
+    // Y-axis voltage labels
+    vga_draw_string(5, GRAPH_Y - 2,               "3.3", COLOR_WHITE);
+    vga_draw_string(5, GRAPH_Y + GRAPH_H/4 - 3,   "2.5", COLOR_WHITE);
+    vga_draw_string(5, GRAPH_Y + GRAPH_H/2 - 3,   "1.6", COLOR_WHITE);
+    vga_draw_string(5, GRAPH_Y + 3*GRAPH_H/4 - 3, "0.8", COLOR_WHITE);
+    vga_draw_string(5, GRAPH_Y + GRAPH_H - 7,     "0.0", COLOR_WHITE); 
+
+    // footer
+    vga_draw_string(90, SCREEN_HEIGHT - 12, "DTEK-V FingerOscilloscope", COLOR_GRID);
+}
+
+// Update display for when gain or rate changes 
+void vga_update_settings(int gain, int sample_rate) {
+    // Just update the gain and rate portion of header
+    vga_draw_filled_rect(80, 5, 80, 8, COLOR_BLACK);
+    
+    vga_draw_string(80, 5, "G:", COLOR_CYAN);
+    vga_draw_int(95, 5, gain, COLOR_CYAN);
+    
+    vga_draw_string(115, 5, "R:", COLOR_CYAN);
+    vga_draw_int(130, 5, sample_rate, COLOR_CYAN);
+}
+
 
 // INITIALIZATION
 void vga_init_scope(int gain, int sample_rate) {
     vga_clear_screen(COLOR_BLACK);
     vga_draw_grid();
-    vga_draw_labels();
-    vga_draw_header(0.0f, 0.0f, 0.0f, gain, sample_rate);
-    vga_draw_footer();
+    vga_draw_header_footer_labels(0.0f, 0.0f, 0.0f, gain, sample_rate);
 }
 
 // Displaying waveform as screen values 

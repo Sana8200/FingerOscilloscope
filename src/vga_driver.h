@@ -62,9 +62,7 @@ void vga_draw_float(int x, int y, float value, uint8_t color);
 
 void vga_draw_grid(void);
 void vga_init_grid_cache(void);
-void vga_draw_labels(void);
-void vga_draw_header(float voltage, float v_max, float v_min, int gain, int sample_rate);
-void vga_draw_footer(void);
+void vga_draw_header_footer_labels(float voltage, float v_max, float v_min, int gain, int sample_rate);
 
 void vga_init_scope(int gain, int sample_rate);
 
