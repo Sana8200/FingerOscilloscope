@@ -180,7 +180,7 @@ int main(void) {
         // Draw waveform point
         int current_y = vga_voltage_to_y(voltage, V_MIN, V_MAX);
         if (pos_x > graph_left) {
-            vga_draw_line(prev_x, prev_y, pos_x, current_y, COLOR_ORANGE);
+            vga_draw_line(prev_x, prev_y, pos_x, current_y, COLOR_ORANGE, false);
         } else {
             vga_draw_pixel(pos_x, current_y, COLOR_ORANGE);
         }
@@ -197,7 +197,7 @@ int main(void) {
             sweep_count++;
             
             // Update header
-            vga_draw_header(voltage, sweep_max, sweep_min, current_gain, current_sample_rate);
+            vga_draw_header_footer_labels(voltage, sweep_max, sweep_min, current_gain, current_sample_rate);
             
             // Reset stats
             sweep_min = V_MAX;
