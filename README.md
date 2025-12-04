@@ -3,7 +3,7 @@
 A real-time digital oscilloscope implemented on the DE10-Lite development board using a RISC-V soft processor and external AD7705 16-bit ADC.
 
 ![Platform](https://img.shields.io/badge/Platform-DE10--Lite-blue)
-![Processor](https://img.shields.io/badge/Processor-RISC--V%20RV32IM-green)
+![Processor](https://img.shields.io/badge/Processor-RISC-green)
 ![ADC](https://img.shields.io/badge/ADC-AD7705%2016--bit-orange)
 ![Display](https://img.shields.io/badge/Display-VGA%20320x240-purple)
 
