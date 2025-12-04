@@ -69,7 +69,6 @@ int main(void) {
     
     display_string("Init VGA...");
     vga_init_scope(current_gain, current_sample_rate);
-    vga_init_grid_cache();
     vga_get_graph_area(&graph_left, &graph_right, &graph_top, &graph_bottom);
     
 
