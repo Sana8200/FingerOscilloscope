@@ -19,13 +19,13 @@
 
 
 // Switch bit masks
-#define SW0_PERF_TEST   0x001   // SW0: Run performance test
+#define SW0_FREEZE      0x001   // SW0: Freeze screen
 #define SW1_RESERVED    0x002   // SW1: 
 #define SW2_GAIN2       0x004   // SW2: Gain = 2
 #define SW3_GAIN4       0x008   // SW3: Gain = 4
 #define SW4_GAIN8       0x010   // SW4: Gain = 8
 #define SW5_RESERVED    0x020   // SW5: 
-#define SW6_RESERVED    0x040   // SW6: 
+#define SW6_PERF_TEST   0x040   // SW6: Runs performance tests
 #define SW7_RESERVED    0x080   // SW7: 
 #define SW8_RATE_DOWN   0x100   // SW8: Sample rate -50
 #define SW9_RATE_UP     0x200   // SW9: Sample rate +50

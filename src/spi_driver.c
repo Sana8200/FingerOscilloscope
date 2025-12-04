@@ -21,8 +21,7 @@ static void spi_delay(void) {
 
 // Initialize SPI GPIO pins
 void spi_init(void) {
-    //display_string("SPI init start...\n");
-    
+    //display_string("SPI init start...\n");    
     // Read current direction register
     uint32_t direction = *pGPIO_DIRECTION;
  
@@ -35,8 +34,7 @@ void spi_init(void) {
     pio_output_state = *pGPIO_DATA;
     pio_output_state |= (SPI_CS_PIN | ADC_RST_PIN | SPI_SCK_PIN);
     pio_output_state &= ~SPI_MOSI_PIN;
-    *pGPIO_DATA = pio_output_state;
-    
+    *pGPIO_DATA = pio_output_state;  
     //display_string("SPI init done\n");
 }
 
@@ -75,8 +73,7 @@ uint8_t spi_transfer_byte(uint8_t byte_out) {
         if (*pGPIO_DATA & SPI_MISO_PIN) {
             byte_in |= 0x01;
         }
-    }
-    
+    }    
     // Clock ends high (Mode 3 idle state)
     return byte_in;
 }
