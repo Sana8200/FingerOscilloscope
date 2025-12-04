@@ -68,7 +68,7 @@ void vga_init_scope(int gain, int sample_rate);
 // Drawing the oscilloscope display
 void vga_draw_grid(void);
 
-void vga_draw_header_footer_labels(float voltage, float v_max, float v_min, int gain, int sample_rate);
+void vga_draw_display_info(float voltage, float v_max, float v_min, int gain, int sample_rate);
 
 // Updating the display
 void vga_update_settings(int gain, int sample_rate);
@@ -78,6 +78,10 @@ void vga_clear_column(int x);
 // Pause functionality display box 
 void vga_show_paused(void);
 void vga_hide_paused(void);
+
+// freeze functionality display indicatro
+void vga_show_freeze_indicator(void);
+void vga_hide_freeze_indicator(void);
 
 // Helper functions
 int vga_voltage_to_y(float voltage, float v_min, float v_max);

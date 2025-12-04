@@ -122,7 +122,7 @@ void vga_draw_grid(void) {
 
 
 // Header and Footer drawing : Showing voltage, gain, sample rate, max, min 
-void vga_draw_header_footer_labels(float voltage, float v_max, float v_min, int gain, int sample_rate) {
+void vga_draw_display_info(float voltage, float v_max, float v_min, int gain, int sample_rate) {
     vga_draw_filled_rect(0, 0, SCREEN_WIDTH, TOP_MARGIN - 2, COLOR_BLACK);  // Clears header part ( -2 to not clear the grid border)
       
     // CH1 voltage
@@ -180,7 +180,7 @@ void vga_update_settings(int gain, int sample_rate) {
 void vga_init_scope(int gain, int sample_rate) {
     vga_clear_screen(COLOR_BLACK);
     vga_draw_grid();
-    vga_draw_header_footer_labels(0.0f, 0.0f, 0.0f, gain, sample_rate);
+    vga_draw_display_info(0.0f, 0.0f, 0.0f, gain, sample_rate);
     //display_string("VGA done!");
 }
 
@@ -263,32 +263,34 @@ void vga_clear_column(int x) {
 #define PAUSE_H  80
 #define PAUSE_X  ((SCREEN_WIDTH - PAUSE_W) / 2)
 #define PAUSE_Y  ((SCREEN_HEIGHT - PAUSE_H) / 2)
-
-
+// show pause box, in the center containing pause message
 void vga_show_paused(void) {
-    vga_draw_filled_rect(PAUSE_X, PAUSE_Y, PAUSE_W, PAUSE_H, COLOR_BLACK);
-    vga_draw_rect(PAUSE_X, PAUSE_Y, PAUSE_W, PAUSE_H, COLOR_RED);
-    vga_draw_rect(PAUSE_X + 1, PAUSE_Y + 1, PAUSE_W - 2, PAUSE_H - 2, COLOR_RED);
-    vga_draw_string(PAUSE_X + 50, PAUSE_Y + 25, "PAUSED", COLOR_RED);
-    vga_draw_string(PAUSE_X + 15, PAUSE_Y + 50, "Press BTN To Continue", COLOR_WHITE);
+    vga_draw_filled_rect(PAUSE_X, PAUSE_Y, PAUSE_W, PAUSE_H, COLOR_WHITE);
+    vga_draw_rect(PAUSE_X, PAUSE_Y, PAUSE_W, PAUSE_H, COLOR_DARK_RED);
+    vga_draw_rect(PAUSE_X + 1, PAUSE_Y + 1, PAUSE_W - 2, PAUSE_H - 2, COLOR_DARK_RED);
+    vga_draw_string(PAUSE_X + 50, PAUSE_Y + 25, "PAUSED", COLOR_DARK_RED);
+    vga_draw_string(PAUSE_X + 15, PAUSE_Y + 50, "Press BTN To Continue", COLOR_DARK_GREEN);
 }
+// hidh pause box, setting the box to black, redrawing grid 
 void vga_hide_paused(void) {
     vga_draw_filled_rect(PAUSE_X, PAUSE_Y, PAUSE_W, PAUSE_H, COLOR_BLACK);  // clearing the box area
-    /**
-     * For precision we can also redraw the grid lines only inside the box */
-    /*
-    for (int i = 1; i < GRID_DIV_X; i++) {
-        int gx = GRID_X(i);
-        if (gx >= PAUSE_X && gx <= PAUSE_X + PAUSE_W)
-        vga_draw_line(gx, PAUSE_Y, gx, PAUSE_Y + PAUSE_H, COLOR_GRID, true);
-    }
+    /* For precision we can also redraw the grid lines only inside the box
+     * for now continuing with just redrawing grid  */
+    vga_draw_grid();
+}
 
-    for (int i = 1; i < GRID_DIV_Y; i++) {
-        int gy = GRID_Y(i);
-        if (gy >= PAUSE_Y && gy <= PAUSE_Y + PAUSE_H)
-        vga_draw_line(PAUSE_X, gy, PAUSE_X + PAUSE_W, gy, COLOR_GRID, true);
-    }
-    */
-   // for now continuing with just redrawing grid 
+
+#define FREEZE_BOX_SIZE  8   // 8x8 pixel boxes
+// Top-right corner position (inside the graph border)
+#define FREEZE_TR_X  (GRAPH_X + GRAPH_W - FREEZE_BOX_SIZE - 3)
+#define FREEZE_TR_Y  (GRAPH_Y + 3)
+// Show freeze indicators - small red boxe top left corner
+void vga_show_freeze_indicator(void) {
+    vga_draw_filled_rect(FREEZE_TR_X, FREEZE_TR_Y, FREEZE_BOX_SIZE, FREEZE_BOX_SIZE, COLOR_RED);
+}
+// Hide freeze indicators - redraw grid and set the freeze box to black
+void vga_hide_freeze_indicator(void) {
+    vga_draw_filled_rect(FREEZE_TR_X, FREEZE_TR_Y, FREEZE_BOX_SIZE, FREEZE_BOX_SIZE, COLOR_BLACK);
+    /* same as pause, we can alse redraw the specific part that indicator was instead of grid*/
     vga_draw_grid();
 }

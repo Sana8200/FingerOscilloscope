@@ -161,8 +161,7 @@ void vga_draw_int(int x, int y, int value, uint8_t color) {
     
     // Draw in reverse order, looping backwards through our buffer to print the number in the correct order
     while (i > 0) {
-        i--;
-        vga_draw_char(x, y, buf[i], color);
+        vga_draw_char(x, y, buf[--i], color);
         x += 6;
     }
 }
@@ -170,10 +169,8 @@ void vga_draw_int(int x, int y, int value, uint8_t color) {
 
 // Draw float with 2 decimal places (e.g., "1.65")
 void vga_draw_float(int x, int y, float value, uint8_t color) {
-    if (value != value){
-        return;
-    } 
-    if (value > 99.99f) { value = 99.99f; }
+    if (value != value){ return; }  // NaN(not a number) check for 0/0
+    if (value > 99.99f) { value = 99.99f; }  // boundry check 
     if (value < -9.99f) { value = -9.99f; }
     if (value < 0) {
         vga_draw_char(x, y, '-', color);
@@ -181,13 +178,12 @@ void vga_draw_float(int x, int y, float value, uint8_t color) {
         value = -value;
     }
     
-    int whole = (int)value;
-    int frac = (int)((value - whole) * 100 + 0.5f);  // Round to 2 decimals
+    int whole = (int)value;   // seperating whole (e.g whole = 1)
+    int frac = (int)((value - whole) * 100 + 0.5f);  // seperating fractins, Rounding(+0.5f) to 2 decimals (e.g. frac = 65)
     
-    // Handle rounding overflow
-    if (frac >= 100) { frac = 0; whole++; }
+    if (frac >= 100) { frac = 0; whole++; }   // Handle rounding overflow (e.g. 1.999 converting to 2.00)
     
-    // Draw whole part
+    // Draw whole part This is same logic as drawing integers 
     if (whole == 0) {
         vga_draw_char(x, y, '0', color);
         x += 6;
@@ -205,14 +201,14 @@ void vga_draw_float(int x, int y, float value, uint8_t color) {
         }
     }
     
-    // Draw decimal point
-    vga_draw_char(x, y, '.', color);
+    // Draw decimal point dot
+    vga_draw_char(x, y, '.', color); 
     x += 6;
-    
+       
     // Draw fraction (always 2 digits)
-    vga_draw_char(x, y, '0' + (frac / 10), color);
+    vga_draw_char(x, y, '0' + (frac / 10), color);  // extracting tenth digit of fraction
     x += 6;
-    vga_draw_char(x, y, '0' + (frac % 10), color);
+    vga_draw_char(x, y, '0' + (frac % 10), color); // extracting ones digit of fraction 
 }
 
 
