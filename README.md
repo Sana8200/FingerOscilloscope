@@ -1,9 +1,9 @@
 # DE10-Lite Digital Oscilloscope
 
-A real-time digital oscilloscope implemented on the DE10-Lite FPGA development board using a RISC-V soft processor and external AD7705 16-bit ADC.
+A real-time digital oscilloscope implemented on the DE10-Lite development board using a RISC-V soft processor and external AD7705 16-bit ADC.
 
 ![Platform](https://img.shields.io/badge/Platform-DE10--Lite-blue)
-![Processor](https://img.shields.io/badge/Processor-RISC--V%20-green)
+![Processor](https://img.shields.io/badge/Processor-RISC--V%20RV32IM-green)
 ![ADC](https://img.shields.io/badge/ADC-AD7705%2016--bit-orange)
 ![Display](https://img.shields.io/badge/Display-VGA%20320x240-purple)
 
@@ -14,6 +14,8 @@ This project implements a functional oscilloscope that:
 - Displays real-time waveforms on a VGA monitor (320×240, 8-bit color)
 - Provides user controls for gain, sample rate, pause, and freeze functions
 - Shows live measurements on both VGA display and 7-segment displays
+- BNC connector
+- Potentiometer
 
 ## Features
 
@@ -21,7 +23,7 @@ This project implements a functional oscilloscope that:
 - **ADC**: AD7705 16-bit sigma-delta converter
 - **Interface**: Bit-banged SPI Mode 3 (CPOL=1, CPHA=1)
 - **Sample Rate**: Adjustable 50-500 Hz
-- **Gain**: Selectable 1×, 2×, 4×, 8× (internal PGA)
+- **Gain**: Selectable 1×, 2×, 4×, 8× 
 - **Voltage Range**: 0-3.3V (unipolar mode)
 
 ### Display
@@ -44,10 +46,12 @@ This project implements a functional oscilloscope that:
 
 ## Hardware Requirements
 
-- **FPGA Board**: Terasic DE10-Lite with DTEK-V RISC-V soft processor
+- **DTEK-V RISC-V**: Terasic DE10-Lite with DTEK-V RISC-V soft processor
 - **ADC**: AD7705 breakout board
 - **Display**: VGA monitor
 - **Power**: 3.3V reference for ADC
+- **Input**: Used 3.3 voltage provider connected to potentiometer for changing the voltage
+- **BNC**: BNC to screw terminal adapter for connecting osilliscope probes 
 
 ### Wiring Diagram
 
@@ -144,20 +148,17 @@ To recalibrate, apply known voltages and adjust the factor in `ad7705_driver.c`.
 
 ## Course Information
 
-Developed for **IS1500 Computer Organization and Components** at KTH Royal Institute of Technology.
+Developed for **IS1200 Computer Organization and Components** at KTH Royal Institute of Technology.
 
 ## License
 
-See [COPYING](src/COPYING) for license information.
+This project is under a proprietary license.
++ [COPYING](src/COPYING) for license information.
 
 ## Authors
-
-- Farshid [Surname]
-- [Partner Name]
+- Sana Monhaser 
 
 ---
 
-*DE10-Lite Oscilloscope - IS1500 Project 2025*
+*DE10-Lite Oscilloscope - IS1200 Project 2025*
 
-### License
-This project is under a proprietary license.
