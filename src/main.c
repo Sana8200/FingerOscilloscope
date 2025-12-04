@@ -45,8 +45,6 @@ static int prev_switches = 0;
 
 
 
-
-
 int main(void) {
     display_string("\n");
     display_string("============================================= DE10-Lite Oscilloscope =============================================\n");

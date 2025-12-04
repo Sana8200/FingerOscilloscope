@@ -121,7 +121,7 @@ void vga_draw_grid(void) {
 }
 
 
-// Header and Footer drawing : Showing voltage, gain, sample rate, max, min 
+// Header and Footer drawing alongsie labels next to grid
 void vga_draw_display_info(float voltage, float v_max, float v_min, int gain, int sample_rate) {
     vga_draw_filled_rect(0, 0, SCREEN_WIDTH, TOP_MARGIN - 2, COLOR_BLACK);  // Clears header part ( -2 to not clear the grid border)
       
