@@ -14,7 +14,7 @@
 
 
 #define V_MIN           0.0f    // Minimum voltage on display
-#define V_MAX           3.0f    // Maximum voltage on display
+#define V_MAX           3.3f    // Maximum voltage on display
 #define ERASE_WIDTH     3       // Pixels to clear ahead of waveform
 
 #define DEFAULT_SAMPLE_RATE   150     // Samples per second
@@ -40,7 +40,9 @@ static int sweep_count;
 static int current_gain = 1;
 static int current_sample_rate = DEFAULT_SAMPLE_RATE;
 static bool is_paused = false;
+static bool is_frozen = false;
 static int prev_switches = 0;   
+
 
 
 
@@ -50,6 +52,7 @@ int main(void) {
     display_string("============================================= DE10-Lite Oscilloscope =============================================\n");
     display_string("Controls:");
     display_string("  Button  : Pause/Resume");
+    display_string("  SW0     : Freeze (examine waveform)");
     display_string("  SW2     : Gain = 2");
     display_string("  SW3     : Gain = 4");
     display_string("  SW4     : Gain = 8");
@@ -71,7 +74,6 @@ int main(void) {
     vga_init_scope(current_gain, current_sample_rate);
     vga_get_graph_area(&graph_left, &graph_right, &graph_top, &graph_bottom);
     
-
     // Initialize variables 
     pos_x = graph_left;
     prev_x = graph_left;
@@ -81,37 +83,60 @@ int main(void) {
     sweep_count = 0;
     
     display_string("\nReady!\n");
-    set_leds(0x001);
+    set_leds(0x002);
     display_7seg_voltage_gain(0.0f, current_gain);
     
     while (1) {
+        // ================================================================
+        // BUTTON PAUSE 
+        // ================================================================
         if (get_btn()) {
             // Wait until button is RELEASED
             while (get_btn()) {
                 delay_ms(10);
             }
             delay_ms(50); // Debounce
-            // Toggle Pause State
-            is_paused = !is_paused;
+            is_paused = !is_paused;  // Toggle Pause State
 
             if (is_paused) {
                 vga_show_paused();
                 set_leds(0x3FF); // All LEDs on
             } else {
                 vga_hide_paused();
-                set_leds(0x001);
+                set_leds(0x002);
             }
         }
-        
-        // 2. PAUSE LOGIC
         if (is_paused) {
-            delay_ms(50); // Idle
+            delay_ms(50); 
             continue;     // Skip the rest of the loop
         }
+
+        // ================================================================
+        // SW0 FREEZE (examine waveform without overlay)
+        // ================================================================
+        int current_switches = get_sw();
+        bool sw0_on = (current_switches & SW0_FREEZE) != 0;
         
-        // Handle gain switches (SW2, SW3, SW4)
-        int new_gain = read_gain_from_switches(get_sw());
-        if(new_gain != current_gain){
+        if (sw0_on != is_frozen) {   // detecting state change 
+            is_frozen = sw0_on;
+            if (is_frozen) {
+                vga_show_freeze_indicator();
+                set_leds(0x001);
+            } else {
+                vga_hide_freeze_indicator();
+            }
+        }
+        if (is_frozen) {
+            delay_ms(50);
+            continue;  // Skip waveform updates - screen stays frozen
+        }
+      
+        
+        // ================================================================
+        // GAIN SWITCHES (SW2, SW3, SW4)
+        // ================================================================
+        int new_gain = read_gain_from_switches(current_switches);
+        if (new_gain != current_gain) {
             current_gain = new_gain;
             ad7705_set_gain(CHN_AIN1, current_gain);
             vga_update_settings(current_gain, current_sample_rate);
@@ -123,14 +148,15 @@ int main(void) {
             } else if (current_gain == 2) {
                 set_leds(0x04);
             } else {
-            set_leds(0x01);
+                set_leds(0x01);
             }
         }
 
-        
 
-        // Handle smaple rate switches (SW8, SW9)(SW9 increase, SW8 decrease)
-        if (switch_pressed(get_sw(), prev_switches, 0x200)) {
+        // ================================================================
+        // SAMPLE_RATE CHANGE SWITCHES (SW8, SW9)
+        // ================================================================
+        if (switch_pressed(current_switches, prev_switches, 0x200)) {
             if (current_sample_rate < MAX_SAMPLE_RATE) {
                 current_sample_rate += 50;
                 timer_init(current_sample_rate);
@@ -138,7 +164,7 @@ int main(void) {
                 set_leds(0x200);
             }
         }
-        if (switch_pressed(get_sw(), prev_switches, 0x100)) {
+        if (switch_pressed(current_switches, prev_switches, 0x100)) {
             if (current_sample_rate > MIN_SAMPLE_RATE) {
                 current_sample_rate -= 50;
                 timer_init(current_sample_rate);
@@ -146,17 +172,15 @@ int main(void) {
                 set_leds(0x100);
             }
         }
-        prev_switches = get_sw();
+        prev_switches = current_switches;
 
-      
+
+        // ================================================================
+        // WAIT FOR TIMER AND READ ADC
+        // ================================================================ 
+        while (!timer_check_tick()) {}
         
-        // Waiting for timer tick 
-        while (!timer_check_tick()) {
-            // Wait for next sample 
-        }
-        
-        // Read ADC
-        float voltage = ad7705_read_voltage(CHN_AIN1);
+        float voltage = ad7705_read_voltage(CHN_AIN1);   // Read ADC
 
         // Update statistics
         if (voltage < sweep_min) sweep_min = voltage;
@@ -164,10 +188,9 @@ int main(void) {
         
         display_7seg_voltage_gain(voltage, current_gain);
 
-    
-        
-        
-        // Erase ahead of waveform
+        // ================================================================
+        // ERASE AHEAD OF WAVEFORM
+        // ================================================================
         for (int i = 1; i <= ERASE_WIDTH; i++) {
             int erase_x = pos_x + i;
             if (erase_x > graph_right) {
@@ -177,7 +200,9 @@ int main(void) {
         }
         
         
-        // Draw waveform point
+        // ================================================================
+        // DRAW WAVEFORM
+        // ================================================================
         int current_y = vga_voltage_to_y(voltage, V_MIN, V_MAX);
         if (pos_x > graph_left) {
             vga_draw_line(prev_x, prev_y, pos_x, current_y, COLOR_ORANGE, false);
@@ -185,25 +210,24 @@ int main(void) {
             vga_draw_pixel(pos_x, current_y, COLOR_ORANGE);
         }
 
-
         prev_x = pos_x;
         prev_y = current_y;
         pos_x++;
-        // Checking if Sweep is complete 
+
+        // ================================================================
+        // CHECK SWEEP COMPLETE
+        // ================================================================ 
         if (pos_x > graph_right) {
-            // End of sweep
             pos_x = graph_left;
             prev_x = graph_left;
             sweep_count++;
             
-            // Update header
-            vga_draw_header_footer_labels(voltage, sweep_max, sweep_min, current_gain, current_sample_rate);
+            vga_draw_display_info(voltage, sweep_max, sweep_min, current_gain, current_sample_rate);  // update 
             
             // Reset stats
             sweep_min = V_MAX;
             sweep_max = V_MIN;
         }
     }
-    
     return 0;
 }
