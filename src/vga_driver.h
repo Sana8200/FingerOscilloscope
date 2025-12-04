@@ -50,9 +50,11 @@
 #define COLOR_DARK_RED   0x40
 #define COLOR_DARK_GREEN 0x08
 
+// Initial setup
+void vga_init_scope(int gain, int sample_rate);
+void vga_draw_display_info(float voltage, float v_max, float v_min, int gain, int sample_rate);
 
 // Basic draawing functions 
-void vga_clear_screen(uint8_t color);
 void vga_draw_pixel(int x, int y, uint8_t color);
 void vga_draw_line(int x0, int y0, int x1, int y1, uint8_t color, bool dashed);
 
@@ -62,18 +64,9 @@ void vga_draw_string(int x, int y, const char *str, uint8_t color);
 void vga_draw_int(int x, int y, int value, uint8_t color);
 void vga_draw_float(int x, int y, float value, uint8_t color);
 
-// Initial setup
-void vga_init_scope(int gain, int sample_rate);
-
-// Drawing the oscilloscope display
-void vga_draw_grid(void);
-
-void vga_draw_display_info(float voltage, float v_max, float v_min, int gain, int sample_rate);
-
 // Updating the display
 void vga_update_settings(int gain, int sample_rate);
 void vga_clear_column(int x);
-
 
 // Pause functionality display box 
 void vga_show_paused(void);
@@ -86,9 +79,5 @@ void vga_hide_freeze_indicator(void);
 // Helper functions
 int vga_voltage_to_y(float voltage, float v_min, float v_max);
 void vga_get_graph_area(int *left, int *right, int *top, int *bottom);
-
-// Drawing border rectangular and filled one
-void vga_draw_rect(int x, int y, int w, int h, uint8_t color);
-void vga_draw_filled_rect(int x, int y, int w, int h, uint8_t color);
 
 #endif // VGA_DRIVER_H
