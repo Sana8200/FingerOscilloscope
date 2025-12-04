@@ -28,11 +28,11 @@ static int graph_top;
 static int graph_bottom;
 
 // Current and previous drawing positions
-static int pos_x;
+static int pos_x;   // where we are currently drawing 
 static int prev_x;
 static int prev_y;
 
-// Statistics
+// Statistics, using sweeping for not redrawing the whole screen every time 
 static float sweep_min;
 static float sweep_max;
 static int sweep_count;
@@ -190,11 +190,12 @@ int main(void) {
         // ERASE AHEAD OF WAVEFORM
         // ================================================================
         for (int i = 1; i <= ERASE_WIDTH; i++) {
-            int erase_x = pos_x + i;
-            if (erase_x > graph_right) {
+            int erase_x = pos_x + i;  // look i pixels ahead of current position
+            // If looking ahead goes offf screen, wrap to start 
+            if (erase_x > graph_right) {  
                 erase_x = graph_left + (erase_x - graph_right - 1);
             }
-            vga_clear_column(erase_x);
+            vga_clear_column(erase_x);  // clearing just this column but keeping grid lines 
         }
         
         
@@ -203,26 +204,30 @@ int main(void) {
         // ================================================================
         int current_y = vga_voltage_to_y(voltage, V_MIN, V_MAX);
         if (pos_x > graph_left) {
+            // draws a line from previous point to the current point
             vga_draw_line(prev_x, prev_y, pos_x, current_y, COLOR_ORANGE, false);
         } else {
+            // if we are at the very start(left edge), just drawing a dot
             vga_draw_pixel(pos_x, current_y, COLOR_ORANGE);
         }
 
+        // Saving current positions as prevous for the next loopiteration 
         prev_x = pos_x;
         prev_y = current_y;
-        pos_x++;
+        pos_x++;  // Move the cursor one step right 
 
         // ================================================================
         // CHECK SWEEP COMPLETE
         // ================================================================ 
         if (pos_x > graph_right) {
-            pos_x = graph_left;
+            pos_x = graph_left; // going back to the left edge 
             prev_x = graph_left;
             sweep_count++;
             
+            // Updating the numbers only once per full sweep 
             vga_draw_display_info(voltage, sweep_max, sweep_min, current_gain, current_sample_rate);  // update 
             
-            // Reset stats
+            // Reset min/max for the next sweep 
             sweep_min = V_MAX;
             sweep_max = V_MIN;
         }

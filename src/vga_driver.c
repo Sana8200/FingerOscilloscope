@@ -111,7 +111,7 @@ void vga_draw_grid(void) {
     
     // vertical grid lines (dashed)
     for (int i = 1; i < GRID_DIV_X; i++) {
-        vga_draw_line(GRID_X(i), GRAPH_Y + 1, GRID_X(i), GRAPH_Y + GRAPH_H - 2, COLOR_GRID, true);
+        vga_draw_line(grid_x_pos(i), GRAPH_Y + 1, grid_x_pos(i), GRAPH_Y + GRAPH_H - 2, COLOR_GRID, true);
     }
     
     // horizontal grid lines (dashed)
@@ -234,7 +234,7 @@ void vga_clear_column(int x) {
     // Check if this column is a vertical grid line
     bool is_vert_grid = false;
     for (int i = 1; i < GRID_DIV_X; i++) {
-        if (x == GRID_X(i)) {
+        if (x == grid_x_pos(i)) {
             is_vert_grid = true;
             break;
         }
