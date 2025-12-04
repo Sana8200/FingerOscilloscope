@@ -14,10 +14,8 @@ This project implements a functional oscilloscope that:
 - Displays real-time waveforms on a VGA monitor (320×240, 8-bit color)
 - Provides user controls for gain, sample rate, pause, and freeze functions
 - Shows live measurements on both VGA display and 7-segment displays
-- BNC connector
-- Potentiometer
+- Added a BNC connector so you can hook up actual oscilloscope probes, and a potentiometer for testing.
 
-## Features
 
 ### Signal Acquisition
 - **ADC**: AD7705 16-bit sigma-delta converter
@@ -26,6 +24,7 @@ This project implements a functional oscilloscope that:
 - **Gain**: Selectable 1×, 2×, 4×, 8× 
 - **Voltage Range**: 0-3.3V (unipolar mode)
 
+
 ### Display
 - **VGA Output**: 320×240 pixels, RGB332 color encoding
 - **Waveform**: Orange trace with sweep-style update
@@ -33,27 +32,29 @@ This project implements a functional oscilloscope that:
 - **Info Display**: Current voltage, min/max, gain, sample rate
 - **7-Segment**: Real-time voltage and gain readout
 
-### User Controls
-| Control | Function |
-|---------|----------|
+
+### Controls
+| Switch/Button | What it does |
+|---------------|--------------|
 | Button | Pause/Resume |
-| SW0 | Freeze display |
+| SW0 | Freeze the screen |
 | SW2 | Gain = 2× |
 | SW3 | Gain = 4× |
 | SW4 | Gain = 8× |
-| SW8 | Sample rate -50 Hz |
-| SW9 | Sample rate +50 Hz |
+| SW8 | Slower sample rate (-50 Hz) |
+| SW9 | Faster sample rate (+50 Hz) |
 
-## Hardware Requirements
 
+## Hardware 
 - **DTEK-V RISC-V**: Terasic DE10-Lite with DTEK-V RISC-V soft processor
-- **ADC**: AD7705 breakout board
+- **ADC**: AD7705 adc board
 - **Display**: VGA monitor
-- **Power**: 3.3V reference for ADC
-- **Input**: Used 3.3 voltage provider connected to potentiometer for changing the voltage
-- **BNC**: BNC to screw terminal adapter for connecting osilliscope probes 
+- **Power**: 3.3V power for the ADC
+- **potentiometer**: Potentiometer (optional, for testing voltage changes)
+- **BNC**: BNC to screw terminal adapter (optional, for oscilloscope probes)
 
-### Wiring Diagram
+
+### Wiring 
 
 ```
 DE10-Lite GPIO    AD7705
@@ -72,58 +73,61 @@ GND        ───►   GND, REF-
 
 ```
 src/
-├── main.c                  # Main application loop
-├── ad7705_driver.c/.h      # AD7705 ADC driver
-├── spi_driver.c/.h         # Bit-banged SPI implementation
-├── vga_driver.c/.h         # VGA graphics driver
-├── vga_text.c              # Font rendering (5×7 bitmap)
-├── timer.c/.h              # Hardware timer for sampling
-├── hardware.c/.h           # LEDs, switches, 7-segment
-├── delay.c/.h              # Software timing delays
-├── boot.S                  # RISC-V boot code
-├── dtekv-lib.c/.h          # JTAG UART printing
+├── main.c                  # Main loop - everything starts here
+├── ad7705_driver.c/.h      # ADC communication
+├── spi_driver.c/.h         # SPI bit-banging
+├── vga_driver.c/.h         # Drawing stuff on screen
+├── vga_text.c              # Text/font rendering
+├── timer.c/.h              # Timer for consistent sampling
+├── hardware.c/.h           # Switches, LEDs, 7-segment
+├── delay.c/.h              # Delay functions
+├── boot.S                  # Startup code
+├── dtekv-lib.c/.h          # Debug printing via JTAG
 ├── dtekv-script.lds        # Linker script
-├── Makefile                # Build configuration
-└── tools/                  # Programming utilities
+└── Makefile
 ```
 
-## Building
+## How to Build and Run
 
 ### Prerequisites
-- RISC-V toolchain (`riscv32-unknown-elf-gcc`)
-- MCB32tools environment
-- Make
+- RISC-V toolchain (riscv32-unknown-elf-gcc)
+- MCB32tools
 
 ### Compile
 ```bash
 cd src
-make build          # Build with -O3 optimization
+make
 ```
 
-### Program and Run
+### Run
 ```bash
-make run            # Upload and run on DE10-Lite
+jtagd --user-start
+dtekv-run main.bin
+```
+
+If it doesn't start, try:
+```bash
+killall jtagd
+jtagd --user-start
+dtekv-run main.bin
 ```
 
 ### Clean
 ```bash
-make clean          # Remove build artifacts
+make clean
 ```
 
-## Technical Details
+## Some Technical Notes
 
-### SPI Implementation
-The AD7705 is interfaced using software bit-banging since the DTEK-V lacks hardware SPI:
-- Clock frequency: ~1 MHz (500ns half-period)
-- Mode 3: Clock idles high, data sampled on rising edge
-- Self-calibration performed at startup and on gain changes
+### SPI
+Since DTEK-V doesn't have hardware SPI, we had to bit-bang it ourselves. It runs at about 1 MHz and uses Mode 3 (clock idles high, sample on rising edge). The ADC does self-calibration when it starts up and whenever you change the gain.
 
-### VGA Driver
-- Frame buffer at `0x08000000`
-- RGB332 format (3-3-2 bits for R-G-B)
-- Bresenham's algorithm for line drawing
-- Efficient row-by-row rectangle filling
-- Column-erase technique for flicker-free sweep updates
+### VGA
+The frame buffer sits at `0x08000000`. We use Bresenham's algorithm for drawing lines and a column-erase approach so the display doesn't flicker when updating.
+
+### Calibration
+There's a calibration factor (around 1.535) in the ADC driver to account for the voltage divider and component tolerances. If your readings are off, you might need to tweak this value in `ad7705_driver.c`.
+
 
 ### Memory Map
 | Address | Peripheral |
@@ -156,9 +160,9 @@ This project is under a proprietary license.
 + [COPYING](src/COPYING) for license information.
 
 ## Authors
-- Sana Monhaser 
+- Sana Monhaseri 
 
 ---
 
-*DE10-Lite Oscilloscope - IS1200 Project 2025*
+*DE10-Lite Oscilloscope - IS1200 Project 2025 - TcomK*
 
