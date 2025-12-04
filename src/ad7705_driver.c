@@ -40,7 +40,7 @@ void ad7705_init(uint8_t channel) {
     if (timeout(500000, channel) != ADC_OK) {
         display_string("ADC init FAILED - timeout!\n");
         set_leds(0x3FF);  
-        while(1);  // can't continue without ADC
+        while(1);  // it will not continoue without adc initializaiton 
     }
     //display_string("ADC init complete.");
 }
