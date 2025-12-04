@@ -103,7 +103,8 @@ void run_performance_test(void) {
 
 
 int main(void) {
-    display_string("============================================= DE10-Lite Oscilloscope =============================================");
+    display_string("\n");
+    display_string("============================================= DE10-Lite Oscilloscope =============================================\n");
     display_string("Controls:");
     display_string("  Button  : Pause/Resume");
     display_string("  SW2     : Gain = 2");
@@ -221,7 +222,7 @@ int main(void) {
                 set_leds(0x100);
             }
         }
-        prev_switches = current_switches;
+        prev_switches = get_sw();
 
       
         
@@ -255,7 +256,7 @@ int main(void) {
         // Draw waveform point
         int current_y = vga_voltage_to_y(voltage, V_MIN, V_MAX);
         if (pos_x > graph_left) {
-            vga_draw_line(prev_x, prev_y, pos_x, current_y, COLOR_ORANGE);
+            vga_draw_line(prev_x, prev_y, pos_x, current_y, COLOR_ORANGE, false);
         } else {
             vga_draw_pixel(pos_x, current_y, COLOR_ORANGE);
         }
@@ -271,7 +272,8 @@ int main(void) {
             prev_x = graph_left;
             sweep_count++;
             
-            vga_draw_header(voltage, sweep_max, sweep_min, current_gain, current_sample_rate);
+            // Update header
+            vga_draw_header_footer_labels(voltage, sweep_max, sweep_min, current_gain, current_sample_rate);
             
             // Reset stats
             sweep_min = V_MAX;
