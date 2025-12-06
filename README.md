@@ -152,12 +152,13 @@ To recalibrate, apply known voltages and adjust the factor in `ad7705_driver.c`.
 
 ## Course Information
 
-Developed for **IS1200 Computer Organization and Components** at KTH Royal Institute of Technology.
+Developed for **IS1200 HT25 Datorteknik** at KTH Royal Institute of Technology.
 
 ## License
 
 This project is under a proprietary license.
 + [COPYING](src/COPYING) for license information.
++ [LICENSE](LICENSE.md)
 
 ## Authors
 - Sana Monhaseri 
