@@ -2,7 +2,7 @@
 
 
 /**
- * FONT DATA - 5x7 pixel characters (searched for font pattern, not implemented entirely by myself)
+ * FONT DATA - 5x7 pixel characters 
  * Each character is 5 bytes (columns), each byte has 7 bits (rows)
  * Bit 0 = top row, Bit 6 = bottom row  
  */ 

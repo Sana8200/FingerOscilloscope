@@ -217,7 +217,7 @@ void vga_get_graph_area(int *left, int *right, int *top, int *bottom) {
     if (bottom) *bottom = GRAPH_Y + GRAPH_H - 2;
 }
 
-/**
+/** Don't forget to check important funciton for drawing the waveform and new waveform after <= 
  * Clear one vertical column and restore grid lines if needed
  * in osilliscope we want to have the new data, so before drawing the new data point 
  * we are earsing the old data point that was from previous sweep
@@ -271,16 +271,13 @@ void vga_show_paused(void) {
     vga_draw_string(PAUSE_X + 50, PAUSE_Y + 25, "PAUSED", COLOR_DARK_RED);
     vga_draw_string(PAUSE_X + 15, PAUSE_Y + 50, "Press BTN To Continue", COLOR_DARK_GREEN);
 }
-// hidh pause box, setting the box to black, redrawing grid 
 void vga_hide_paused(void) {
-    vga_draw_filled_rect(PAUSE_X, PAUSE_Y, PAUSE_W, PAUSE_H, COLOR_BLACK);  // clearing the box area
-    /* For precision we can also redraw the grid lines only inside the box
-     * for now continuing with just redrawing grid  */
+    vga_draw_filled_rect(PAUSE_X, PAUSE_Y, PAUSE_W, PAUSE_H, COLOR_BLACK);  
     vga_draw_grid();
 }
 
 
-#define FREEZE_BOX_SIZE  8   // 8x8 pixel boxes
+#define FREEZE_BOX_SIZE  8   
 // Top-right corner position (inside the graph border)
 #define FREEZE_TR_X  (GRAPH_X + GRAPH_W - FREEZE_BOX_SIZE - 3)
 #define FREEZE_TR_Y  (GRAPH_Y + 3)
@@ -288,9 +285,7 @@ void vga_hide_paused(void) {
 void vga_show_freeze_indicator(void) {
     vga_draw_filled_rect(FREEZE_TR_X, FREEZE_TR_Y, FREEZE_BOX_SIZE, FREEZE_BOX_SIZE, COLOR_RED);
 }
-// Hide freeze indicators - redraw grid and set the freeze box to black
 void vga_hide_freeze_indicator(void) {
     vga_draw_filled_rect(FREEZE_TR_X, FREEZE_TR_Y, FREEZE_BOX_SIZE, FREEZE_BOX_SIZE, COLOR_BLACK);
-    /* same as pause, we can alse redraw the specific part that indicator was instead of grid*/
     vga_draw_grid();
 }
