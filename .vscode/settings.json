@@ -1,0 +1,14 @@
+{
+    "files.associations": {
+        "queue": "c",
+        "stack": "c",
+        "spi_driver.h": "c",
+        "hardware.h": "c",
+        "stdint.h": "c",
+        "ad7705_driver.h": "c",
+        "delay.h": "c",
+        "stdbool.h": "c",
+        "vga_driver.h": "c",
+        "timer.h": "c"
+    }
+}
