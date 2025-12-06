@@ -1,6 +1,7 @@
 /**
  * AD7705 is a 2-channel, 16-bit ADC , 2 input channels, on chip settings for gain, update_rate and has a on-chip digital low-pass filter 
  * SPI (Mode 3), Self-calibration and system calibration modes
+ * Followed the documenation of ad7705 for what is needed and what to do each step 
  */
 #ifndef AD7705_DRIVER_H
 #define AD7705_DRIVER_H
