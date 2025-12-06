@@ -19,12 +19,13 @@ This project implements a functional oscilloscope that:
 ## Demo
 
 ### Hardware Setup
-![Hardware Setup](images/hardware_setup.jpg)
+![Hardware Setup](https://raw.githubusercontent.com/Sana8200/FingerOscilloscope/images/hardware_setup.jpg)
+*DE10-Lite board connected to AD7705 ADC module with BNC connectors and potentiometer for testing*
 
 ### Waveform Display
-![Oscilloscope Screen](images/screen1.jpg)
-![Oscilloscope Screen with Gain 4x](images/screen2.jpg)
-![Oscilloscope Screen at 350 Hz](images/screen3.jpg)
+| Gain 1x, 150 Hz | Gain 4x, 150 Hz | Gain 1x, 350 Hz |
+|:---------------:|:---------------:|:---------------:|
+| ![G1 R150](https://raw.githubusercontent.com/Sana8200/FingerOscilloscope/images/screen1.jpg) | ![G4 R150](https://raw.githubusercontent.com/Sana8200/FingerOscilloscope/images/screen2.jpg) | ![G1 R350](https://raw.githubusercontent.com/Sana8200/FingerOscilloscope/images/screen3.jpg) |
 
 
 ### Signal Acquisition
