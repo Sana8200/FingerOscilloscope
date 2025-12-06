@@ -45,7 +45,7 @@ static int current_gain = 1;
 static int current_sample_rate = DEFAULT_SAMPLE_RATE;
 static bool is_paused = false;
 static bool is_frozen = false;
-static int prev_switches = 0; 
+static int prev_switches = 0;   
 static bool perf_test_running = false;   
 
 
@@ -111,9 +111,9 @@ int main(void) {
     display_string("  SW2     : Gain = 2");
     display_string("  SW3     : Gain = 4");
     display_string("  SW4     : Gain = 8");
-    display_string("  SW6     : Runs Performance Test");
+    display_string("  SW6     : Run Performance Analysis test");
     display_string("  SW8     : Sample Rate -50");
-    display_string("  SW9     : Sample Rate +50\n");;
+    display_string("  SW9     : Sample Rate +50\n");
 
     display_string("Init Timer...");
     timer_init(current_sample_rate);
@@ -130,7 +130,6 @@ int main(void) {
     vga_init_scope(current_gain, current_sample_rate);
     vga_get_graph_area(&graph_left, &graph_right, &graph_top, &graph_bottom);
     
-
     // Initialize variables 
     pos_x = graph_left;
     prev_x = graph_left;

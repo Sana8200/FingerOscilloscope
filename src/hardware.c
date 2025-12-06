@@ -19,20 +19,18 @@ static const int sev_seg_map[] = {   // Look up table for the numbers on the 7 s
 #define SEG_BLANK   0xFF 
 #define SEG_DP      0x7F  
 
-// Takes an integer and writes it to the LED base address to control the 10 LEDs.
+
 void set_leds(int led_mask){
     volatile int * led_pointer = (volatile int *) LED_BASE_ADDR;
     *led_pointer = led_mask;
 }
 
 
-// reads the status of teh push button
 int get_btn(void){
     return (*pPUSH_BUTTONS) & 0x01 ;    
 }
     
 
-// Reads the status of the 10 toggle switches on the board, no parameter
 int get_sw(void){
     return (*pSWITCHES) & 0x3FF; 
 }
@@ -60,11 +58,10 @@ void set_display( int display_number, int value){
 }
 
 
-// 7-Segment Display - Show voltage and gain 
+
+
 void display_7seg_voltage_gain(float voltage, int gain) {
-    // Display format: X.XX V : HEX displays 5-0: [5][4][3][2][1][0]  => We use: [5]=tens, [4]=ones, [3]='.', [2]=tenths, [1]=dash, [0]=gain
-    
-    // Clamp to 0-9.99
+    /* Display format: [5]=ones [4]=dp [3]=tenths [2]=hundredths [1]=dash [0]=gain */
     if (voltage < 0) voltage = 0;
     if (voltage > 9.99f) voltage = 9.99f;
     
@@ -85,7 +82,7 @@ void display_7seg_voltage_gain(float voltage, int gain) {
 // checks if a switch just pressed (rising edge) with debouncing 
 bool switch_pressed(int current, int previous, int bit) {
     if ((current & bit) && !(previous & bit)) {
-        delay_ms(DEBOUNCE_DELAY_MS);  // rising edge detection for debouncing 
+        delay_ms(DEBOUNCE_DELAY_MS);  
         int confirmed = get_sw();  
         return (confirmed & bit) != 0;
     }
