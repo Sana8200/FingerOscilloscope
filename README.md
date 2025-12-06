@@ -19,7 +19,7 @@ This project implements a functional oscilloscope that:
 ## Demo
 
 ### Hardware Setup
-![Hardware Setup](https://github.com/Sana8200/FingerOscilloscope/blob/images/hardware_setup.jpg)
+<img src="https://github.com/Sana8200/FingerOscilloscope/blob/images/hardware_setup.jpg" width="400">
 *DE10-Lite board connected to AD7705 ADC module with BNC connectors and potentiometer for testing*
 
 ### Waveform Display
