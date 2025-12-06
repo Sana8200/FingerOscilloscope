@@ -16,6 +16,16 @@ This project implements a functional oscilloscope that:
 - Shows live measurements on both VGA display and 7-segment displays
 - Added a BNC connector so you can hook up actual oscilloscope probes, and a potentiometer for testing.
 
+## Demo
+
+### Hardware Setup
+![Hardware Setup](images/hardware_setup.jpg)
+
+### Waveform Display
+![Oscilloscope Screen](images/screen1.jpg)
+![Oscilloscope Screen with Gain 4x](images/screen2.jpg)
+![Oscilloscope Screen at 350 Hz](images/screen3.jpg)
+
 
 ### Signal Acquisition
 - **ADC**: AD7705 16-bit sigma-delta converter
@@ -28,7 +38,7 @@ This project implements a functional oscilloscope that:
 ### Display
 - **VGA Output**: 320×240 pixels, RGB332 color encoding
 - **Waveform**: Orange trace with sweep-style update
-- **Grid**: Dashed grid lines (20×15 divisions)
+- **Grid**: Dashed grid lines 
 - **Info Display**: Current voltage, min/max, gain, sample rate
 - **7-Segment**: Real-time voltage and gain readout
 
@@ -73,18 +83,18 @@ GND        ───►   GND, REF-
 
 ```
 src/
-├── main.c                  # Main loop - everything starts here
-├── ad7705_driver.c/.h      # ADC communication
-├── spi_driver.c/.h         # SPI bit-banging
-├── vga_driver.c/.h         # Drawing stuff on screen
-├── vga_text.c              # Text/font rendering
-├── timer.c/.h              # Timer for consistent sampling
-├── hardware.c/.h           # Switches, LEDs, 7-segment
-├── delay.c/.h              # Delay functions
-├── boot.S                  # Startup code
-├── dtekv-lib.c/.h          # Debug printing via JTAG
-├── dtekv-script.lds        # Linker script
-└── Makefile
+|-- main.c                  # Main loop
+|-- ad7705_driver.c/.h      # ADC communication
+|-- spi_driver.c/.h         # SPI bit-banging
+|-- vga_driver.c/.h         # Drawing stuff on screen
+|-- vga_text.c              # Text/font rendering
+|-- timer.c/.h              # Timer for consistent sampling
+|-- hardware.c/.h           # Switches, LEDs, 7-segment
+|-- delay.c/.h              # Delay functions
+|-- boot.S                  # Startup code
+|-- dtekv-lib.c/.h          # Debug printing via JTAG
+|-- dtekv-script.lds        # Linker script
++-- Makefile
 ```
 
 ## How to Build and Run
@@ -166,4 +176,3 @@ This project is under a proprietary license.
 ---
 
 *DE10-Lite Oscilloscope - IS1200 Project 2025 - TcomK*
-
