@@ -20,25 +20,25 @@
 
 // Switch bit masks
 #define SW0_FREEZE      0x001   // SW0: Freeze screen
-#define SW1_RESERVED    0x002   // SW1: 
+#define SW1             0x002   // SW1: 
 #define SW2_GAIN2       0x004   // SW2: Gain = 2
 #define SW3_GAIN4       0x008   // SW3: Gain = 4
 #define SW4_GAIN8       0x010   // SW4: Gain = 8
-#define SW5_RESERVED    0x020   // SW5: 
-#define SW6_RESERVED    0x040   // SW6: 
-#define SW7_RESERVED    0x080   // SW7: 
+#define SW5             0x020   // SW5: 
+#define SW6             0x040   // SW6: 
+#define SW7             0x080   // SW7: 
 #define SW8_RATE_DOWN   0x100   // SW8: Sample rate -50
 #define SW9_RATE_UP     0x200   // SW9: Sample rate +50
-
 
 
 void set_leds(int led_mask);
 int get_sw(void);
 int get_btn(void);
-void set_display(int display_number, int value);
 
+void set_display(int display_number, int value);
 void display_7seg_voltage_gain(float voltage, int gain);
 void set_display_raw(int display_number, int bit_pattern);
+
 int read_gain_from_switches(int switches);
 bool switch_pressed(int current, int previous, int bit);
 
