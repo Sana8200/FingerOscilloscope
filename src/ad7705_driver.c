@@ -10,7 +10,7 @@ static void set_next_operation(uint8_t reg, uint8_t channel, bool read);
 static void write_clock_register(uint8_t channel, uint8_t clkdis, uint8_t clkdiv, uint8_t clk, uint8_t update_rate);
 static void write_setup_register(uint8_t channel, uint8_t mode, uint8_t gain, uint8_t b_u, uint8_t buf, uint8_t fsync);
 static bool check_drdy(uint8_t channel);
-int timeout(int timeout, uint8_t channel);
+static int wait_for_ready(int timeout, uint8_t channel);
 static uint8_t current_gain_setting = GAIN_1;
 
 
@@ -18,12 +18,11 @@ static uint8_t current_gain_setting = GAIN_1;
 void ad7705_init(uint8_t channel) {
     //display_string("AD7705 init start");
     // Hardware reset
-    spi_reset_pin(false);   // Assert reset (active low)
+    spi_reset_pin(false);   
     delay_ms(10);           
-    spi_reset_pin(true);    // Release reset
-    delay_ms(10);           // Wait for ADC to stabilize
-    
-    spi_interface_reset();  // resetting spi (safety)
+    spi_reset_pin(true);    
+    delay_ms(10);             
+    spi_interface_reset();  
     
     // Configure Clock Register: CLKDIS=0 (clock enabled), CLKDIV (division), CLK=1 (MCLK > 2MHz), update rate
     write_clock_register(channel, 0, 1, 1, UPDATE_RATE_500);
@@ -32,25 +31,23 @@ void ad7705_init(uint8_t channel) {
     write_setup_register(channel, MODE_SELF_CAL, GAIN_1, UNIPOLAR, 0, 0);    
     current_gain_setting = GAIN_1;               
     
-    // Watiting for adc to start calibration and stabilize 
     delay_ms(10);  
     
     // Wait for self-calibration to complete: DRDY goes low when calibration is done - page 18 doc
     display_string("Waiting for ad7705 for self-calibration...");
-    if (timeout(500000, channel) != ADC_OK) {
+    if (wait_for_ready(500000, channel) != ADC_OK) {
         display_string("ADC init FAILED - timeout!\n");
-        set_leds(0x3FF);  
-        while(1);  // it will not continoue without adc initializaiton 
+        set_leds(0x3FF);
+        while (1);
     }
     //display_string("ADC init complete.");
 }
 
 
-
 // Read and return raw 16-bit ADC data from specified channel, Blocks until data is ready
 uint16_t ad7705_read_data(uint8_t channel) {
     // Wait for data ready
-    if (timeout(100000, channel) != ADC_OK) {
+    if (wait_for_ready(100000, channel) != ADC_OK) {
         display_string("ADC read timeout\n");
         return 32768;   /// mid-scale value on timeout 
     }
@@ -73,8 +70,7 @@ uint16_t ad7705_read_data(uint8_t channel) {
  * Higher gain = more precision, smaller max input voltage3
  */
 void ad7705_set_gain(uint8_t channel, int gain_value) {
-    uint8_t gain_setting;
-    
+    uint8_t gain_setting;  
     // Convert gain values to register setting
     switch (gain_value) {
         case 1:   gain_setting = GAIN_1;   break;
@@ -94,7 +90,7 @@ void ad7705_set_gain(uint8_t channel, int gain_value) {
     // Write new setup with self-calibration, recalibrates with the new gain
     write_setup_register(channel, MODE_SELF_CAL, gain_setting, UNIPOLAR, 0, 0);
     delay_ms(10);
-    if (timeout(100000, channel) != ADC_OK) {
+    if (wait_for_ready(100000, channel) != ADC_OK) {
         display_string("Gain change failed\n");
         current_gain_setting = GAIN_1;
     }
@@ -110,15 +106,14 @@ void ad7705_set_gain(uint8_t channel, int gain_value) {
  */
 float ad7705_read_voltage(uint8_t channel) {
     uint16_t raw = ad7705_read_data(channel);
-    
-    // Gain multiplier lookup table
+
     static const float gain_values[] = {1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f, 64.0f, 128.0f};
     float gain = gain_values[current_gain_setting & 0x07];
     
     // Base voltage calculation (with gain compensation)
     float voltage = ((float)raw / 65535.0f) * VREF / gain;
     
-    /** since there are internal and hardware reverence behaviour, voltgae divider and other components were reducing the signal
+    /** since there were internal and hardware reverence behaviour, voltgae divider and other components were reducing the signal
      * for capturing the real signal I applied this voltage calibration factor which gained by experiments and it's just exception and 
      * specific for this hardware 
      *  */ 
@@ -211,7 +206,7 @@ static bool check_drdy(uint8_t channel) {
 
 
 
-int timeout(int timeout, uint8_t channel) {
+static int wait_for_ready(int timeout, uint8_t channel) {
     while (timeout > 0) {
         if (check_drdy(channel)) {
             return ADC_OK;
