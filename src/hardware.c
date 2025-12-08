@@ -36,16 +36,15 @@ int get_sw(void){
 }
 
 
-// Write raw pattern to display
+
 void set_display_raw(int display_number, int bit_pattern) {
     unsigned int displayer_address = SEV_SEG_DISPLAY_BASE_ADDR + (display_number * 0x10);
     volatile int *display_pointer = (volatile int *) displayer_address;
     *display_pointer = bit_pattern;
 }
 
-// writes a value to one of the six 7-segment displays
+
 void set_display( int display_number, int value){
-    // If the value is valid, it will look up the digit in the array to find the correct bit pattern 
     int bit_pattern;
 
     if(value >= 0 && value <= 9){
@@ -53,7 +52,7 @@ void set_display( int display_number, int value){
     } else {
         bit_pattern = SEG_BLANK;               
     }
-    // Calculating the address for the specified display 
+
     set_display_raw(display_number, bit_pattern);
 }
 
@@ -65,7 +64,7 @@ void display_7seg_voltage_gain(float voltage, int gain) {
     if (voltage < 0) voltage = 0;
     if (voltage > 9.99f) voltage = 9.99f;
     
-    int v_hundredths = (int)(voltage * 100 + 0.5f);  // e.g., 1.65V -> 165
+    int v_hundredths = (int)(voltage * 100 + 0.5f);  
     int ones = (v_hundredths / 100) % 10;
     int tenths = (v_hundredths / 10) % 10;
     int hundredths = v_hundredths % 10;
@@ -79,7 +78,6 @@ void display_7seg_voltage_gain(float voltage, int gain) {
 }
 
 
-// checks if a switch just pressed (rising edge) with debouncing 
 bool switch_pressed(int current, int previous, int bit) {
     if ((current & bit) && !(previous & bit)) {
         delay_ms(DEBOUNCE_DELAY_MS);  
@@ -90,7 +88,6 @@ bool switch_pressed(int current, int previous, int bit) {
 }
 
 
-// Check Switches for gain change 
 int read_gain_from_switches(int switches) {
     if (switches & SW3_GAIN4) {       
         return 4;

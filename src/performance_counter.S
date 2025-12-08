@@ -1,64 +1,95 @@
-# assembly implementation of performance counter functions for DTEK-V
-# Uses RISC-V CSR instructions to access hardware performance counters
+# DTEK-V hardware performance counter access
+# Using CSR registers to read/write perfromance counters (we want to read from these hardware counters)
 
-.text
+.data
+
+.global  clk_cycles, instructions, mem_instr, i_cache_miss, d_cache_miss, i_cache_stall, d_cache_stall, data_hazard_stall, alu_stall
+clk_cycles:         .word 0
+instructions:       .word 0
+mem_instr:          .word 0
+i_cache_miss:       .word 0
+d_cache_miss:       .word 0
+i_cache_stall:      .word 0
+d_cache_stall:      .word 0
+data_hazard_stall:  .word 0
+alu_stall:          .word 0
+
+
+
+.text 
 .align 2
-.globl perf_clear_counters, perf_read_counters
+.global clear_counters, read_counters
 
-# perf_clear_counters (no arguments, no returns): Clears all 9 performance counters to zero
-perf_clear_counters:
-    csrw mcycle, zero
-    csrw minstret, zero
-    csrw mhpmcounter3, zero
-    csrw mhpmcounter4, zero
-    csrw mhpmcounter5, zero
-    csrw mhpmcounter6, zero
-    csrw mhpmcounter7, zero
-    csrw mhpmcounter8, zero
-    csrw mhpmcounter9, zero
+
+# mcycle - clock cycles - clk_cycles
+# minstret - instructions retired - instructions
+# mhpmcounter3 - memory instructions - mem_instr
+# mhpmcounter4 - I-cache misses - i_cache_miss
+# mhpmcounter5 - D-cache misses - d_cache_miss
+# mhpmcounter6 - I-cache stall cycles - i_cache_stall
+# mhpmcounter7 - D-cache stall cycles - d_cache_stall
+# mhpmcounter8 - data hazard stalls - data_hazard_stall
+# mhpmcounter9 - ALU stalls - alu_stall
+
+
+
+clear_counters:
+    csrw mcycle, x0
+    csrw minstret, x0
+    csrw mhpmcounter3, x0
+    csrw mhpmcounter4, x0
+    csrw mhpmcounter5, x0
+    csrw mhpmcounter6, x0
+    csrw mhpmcounter7, x0
+    csrw mhpmcounter8, x0
+    csrw mhpmcounter9, x0
     ret
 
 
-# =============================================================================
-# perf_read_counters (no returns, values stored in struct) : Reads all 9 performance counters into a struct
-# Arguments: a0 = pointer to perf_counters_t struct
-# Struct layout (each field is 4 bytes):
-#   offset 0:  cycles (mcycle)
-#   offset 4:  instructions (minstret)
-#   offset 8:  mem_instr (mhpmcounter3)
-#   offset 12: icache_miss (mhpmcounter4)
-#   offset 16: dcache_miss (mhpmcounter5)
-#   offset 20: icache_stall (mhpmcounter6)
-#   offset 24: dcache_stall (mhpmcounter7)
-#   offset 28: hazard_stall (mhpmcounter8)
-#   offset 32: alu_stall (mhpmcounter9)
-# =============================================================================
-perf_read_counters:
+read_counters:
+    # mcycle -> clk_cycles
     csrr t0, mcycle
-    sw t0, 0(a0)
+    la t1, clk_cycles
+    sw t0, 0(t1)
     
+    # minstret -> instructions
     csrr t0, minstret
-    sw t0, 4(a0)
+    la t1, instructions
+    sw t0, 0(t1)
     
+    # mhpmcounter3 -> mem_instr
     csrr t0, mhpmcounter3
-    sw t0, 8(a0)
+    la t1, mem_instr
+    sw t0, 0(t1)
     
+    # mhpmcounter4 -> i_cache_miss
     csrr t0, mhpmcounter4
-    sw t0, 12(a0)
+    la t1, i_cache_miss
+    sw t0, 0(t1)
     
+    # mhpmcounter5 -> d_cache_miss
     csrr t0, mhpmcounter5
-    sw t0, 16(a0)
+    la t1, d_cache_miss
+    sw t0, 0(t1)
     
+    # mhpmcounter6 -> i_cache_stall
     csrr t0, mhpmcounter6
-    sw t0, 20(a0)
+    la t1, i_cache_stall
+    sw t0, 0(t1)
     
+    # mhpmcounter7 -> d_cache_stall
     csrr t0, mhpmcounter7
-    sw t0, 24(a0)
+    la t1, d_cache_stall
+    sw t0, 0(t1)
     
+    # mhpmcounter8 -> data_hazard_stall
     csrr t0, mhpmcounter8
-    sw t0, 28(a0)
+    la t1, data_hazard_stall
+    sw t0, 0(t1)
     
+    # mhpmcounter9 -> alu_stall
     csrr t0, mhpmcounter9
-    sw t0, 32(a0)
+    la t1, alu_stall
+    sw t0, 0(t1)
     
     ret

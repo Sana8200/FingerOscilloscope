@@ -3,27 +3,18 @@
 
 #include <stdint.h>
 
+extern uint32_t clk_cycles;          // mcycle - clock cycles
+extern uint32_t instructions;        // minstret - instructions retired
+extern uint32_t mem_instr;           // mhpmcounter3 - memory instructions
+extern uint32_t i_cache_miss;        // mhpmcounter4 - I-cache misses
+extern uint32_t d_cache_miss;        // mhpmcounter5 - D-cache misses
+extern uint32_t i_cache_stall;       // mhpmcounter6 - I-cache stall cycles
+extern uint32_t d_cache_stall;       // mhpmcounter7 - D-cache stall cycles
+extern uint32_t data_hazard_stall;   // mhpmcounter8 - data hazard stalls
+extern uint32_t alu_stall;           // mhpmcounter9 - ALU stalls
 
-// Performance counter data structure : Holds all 9 hardware performance counters from the DTEK-V board
+extern void clear_counters(void);
 
-typedef struct {
-    uint32_t cycles;          // mcycle - Clock cycles elapsed
-    uint32_t instructions;    // minstret - Instructions retired
-    uint32_t mem_instr;       // mhpmcounter3 - Memory instructions (load/store)
-    uint32_t icache_miss;     // mhpmcounter4 - I-cache misses
-    uint32_t dcache_miss;     // mhpmcounter5 - D-cache misses
-    uint32_t icache_stall;    // mhpmcounter6 - I-cache stall cycles
-    uint32_t dcache_stall;    // mhpmcounter7 - D-cache stall cycles
-    uint32_t hazard_stall;    // mhpmcounter8 - Data hazard stalls
-    uint32_t alu_stall;       // mhpmcounter9 - ALU stalls (division)
-} perf_counters_t;
+void print_counters(void);
 
-
-extern void perf_clear_counters(void);
-extern void perf_read_counters(perf_counters_t *counters);
-
-void perf_print_counters(perf_counters_t *counters);
-void perf_print_metrics(perf_counters_t *counters);
-
-
-#endif /* PERF_COUNTERS_H */
+#endif
