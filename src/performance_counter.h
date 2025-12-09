@@ -14,6 +14,7 @@ extern uint32_t data_hazard_stall;   // mhpmcounter8 - data hazard stalls
 extern uint32_t alu_stall;           // mhpmcounter9 - ALU stalls
 
 extern void clear_counters(void);
+extern void read_counters(void);
 
 void print_counters(void);
 

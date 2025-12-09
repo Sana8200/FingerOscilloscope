@@ -27,9 +27,9 @@ void ad7705_init(uint8_t channel) {
     current_gain_setting = GAIN_1;               
     
     delay_ms(10);  
-    display_string("Waiting for ad7705 for self-calibration...");
+    print("Waiting for ad7705 for self-calibration...");
     if (wait_for_ready(500000, channel) != ADC_OK) {
-        display_string("ADC init FAILED - timeout!\n");
+        print("ADC init FAILED - timeout!\n");
         set_leds(0x3FF);
         while (1);
     }
@@ -39,7 +39,7 @@ void ad7705_init(uint8_t channel) {
 
 uint16_t ad7705_read_data(uint8_t channel) {
     if (wait_for_ready(100000, channel) != ADC_OK) {
-        display_string("ADC read timeout\n");
+        print("ADC read timeout\n");
         return 32768;   
     }
     set_next_operation(REG_DATA, channel, true); 
@@ -75,7 +75,7 @@ void ad7705_set_gain(uint8_t channel, int gain_value) {
     write_setup_register(channel, MODE_SELF_CAL, gain_setting, UNIPOLAR, 0, 0);
     delay_ms(10);
     if (wait_for_ready(100000, channel) != ADC_OK) {
-        display_string("Gain change failed\n");
+        print("Gain change failed\n");
         current_gain_setting = GAIN_1;
     }
 }
@@ -153,6 +153,6 @@ static int wait_for_ready(int timeout, uint8_t channel) {
         }
         timeout--;
     }
-    display_string("ADC TIMEOUT!\n");
+    print("ADC TIMEOUT!\n");
     return ADC_TIMEOUT;
 }

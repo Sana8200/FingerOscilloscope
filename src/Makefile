@@ -5,42 +5,36 @@ OBJECTS ?= $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 LINKER ?= $(SRC_DIR)/dtekv-script.lds
 
 TOOLCHAIN ?= riscv32-unknown-elf-
+BASE_FLAGS ?= -Wall -nostdlib -mabi=ilp32 -march=rv32imzicsr -fno-builtin
 
-# Default optimization level (can be overridden)
-OPT_LEVEL ?= -O3
+OPT ?= -O3
 
-# Base flags (common to all builds)
-BASE_FLAGS = -Wall -nostdlib -mabi=ilp32 -march=rv32imzicsr -fno-builtin
-
-# Combined flags
-CFLAGS = $(BASE_FLAGS) $(OPT_LEVEL)
+CFLAGS = $(BASE_FLAGS) $(OPT)
 
 
-# Default build (O3)
 build: clean main.bin
 
-# Build with no optimization (for performance comparison)
 build-O0:
-	$(MAKE) build OPT_LEVEL="-O0"
-	mv main.bin main_O0.bin
-	mv main.elf main_O0.elf
-	@echo "Built with -O0 -> main_O0.bin"
+	$(MAKE) build OPT=-O0
+	mv main.bin main-O0.bin
+	mv main.elf main-O0.elf
 
-# Build with heavy optimization (for performance comparison)
+
+run-O0: build-O0
+	$(MAKE) run FILE_TO_RUN=$(CURDIR)/main-O0.bin
+
+
 build-O3:
-	$(MAKE) build OPT_LEVEL="-O3"
-	mv main.bin main_O3.bin
-	mv main.elf main_O3.elf
-	@echo "Built with -O3 -> main_O3.bin"
+	$(MAKE) build OPT=-O3
+	mv main.bin main-O3.bin
+	mv main.elf main-O3.elf
 
-# Build both versions for comparison
-build-both: clean
-	$(MAKE) build-O0
-	$(MAKE) build-O3
+
+run-O3: build-O3
+	$(MAKE) run FILE_TO_RUN=$(CURDIR)/main-O3.bin
 
 
 main.elf: 
-	@echo "Compiling with: $(CFLAGS)"
 	$(TOOLCHAIN)gcc -c $(CFLAGS) $(SOURCES)
 	$(TOOLCHAIN)ld -o $@ -T $(LINKER) $(filter-out boot.o, $(OBJECTS)) softfloat.a
 
@@ -54,12 +48,5 @@ clean:
 
 
 TOOL_DIR ?= ./tools
-
 run: main.bin
-	make -C $(TOOL_DIR) "FILE_TO_RUN=$(CURDIR)/$<"
-
-run-O0: main_O0.bin
-	make -C $(TOOL_DIR) "FILE_TO_RUN=$(CURDIR)/$<"
-
-run-O3: main_O3.bin
 	make -C $(TOOL_DIR) "FILE_TO_RUN=$(CURDIR)/$<"

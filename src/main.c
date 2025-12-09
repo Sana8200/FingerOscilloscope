@@ -20,7 +20,7 @@
 
 
 // Number of samples to for performance measurement
-#define PERF_TEST_SAMPLES  150
+#define PERF_TEST_SAMPLES  500
 
 // Perfromance Measuremnt
 static int sample_count = 0;
@@ -46,31 +46,41 @@ static bool is_paused = false;
 static bool is_frozen = false;
 static int prev_switches = 0;   
 
+static inline uint32_t get_cycles(void) {
+    uint32_t cycles;
+    asm volatile ("csrr %0, mcycle" : "=r" (cycles));
+    return cycles;
+}
+
+uint32_t time_idle_start, time_work_start, time_work_end;
+uint32_t total_active_cycles = 0;
+uint32_t total_idle_cycles = 0;
+
 
 int main(void) {
-    display_string("\n");
-    display_string("============================================= DE10-Lite Oscilloscope =============================================\n");
-    display_string("Controls:");
-    display_string("  Button  : Pause/Resume");
-    display_string("  SW0     : Freeze (examine waveform)");
-    display_string("  SW2     : Gain = 2");
-    display_string("  SW3     : Gain = 4");
-    display_string("  SW4     : Gain = 8");
-    display_string("  SW8     : Sample Rate -50");
-    display_string("  SW9     : Sample Rate +50\n\n");
+    print("\n");
+    print("============================================= DE10-Lite Oscilloscope =============================================\n");
+    print("Controls:");
+    print("  Button  : Pause/Resume");
+    print("  SW0     : Freeze (examine waveform)");
+    print("  SW2     : Gain = 2");
+    print("  SW3     : Gain = 4");
+    print("  SW4     : Gain = 8");
+    print("  SW8     : Sample Rate -50");
+    print("  SW9     : Sample Rate +50\n\n");
 
-    display_string("Init Timer...");
+    print("Init Timer...");
     timer_init(current_sample_rate);
     
-    display_string("Init SPI...");
+    print("Init SPI...");
     spi_init();
     delay_ms(50);
     
-    display_string("Init ADC...");
+    print("Init ADC...");
     ad7705_init(CHN_AIN1);
     delay_ms(100);
     
-    display_string("Init VGA...");
+    print("Init VGA...");
     vga_init_scope(current_gain, current_sample_rate);
     vga_get_graph_area(&graph_left, &graph_right, &graph_top, &graph_bottom);
     
@@ -81,14 +91,18 @@ int main(void) {
     sweep_max = V_MIN;
     sweep_count = 0;
     
-    display_string("\nReady!\n");
+    print("\nReady!\n");
     set_leds(0x002);
     display_7seg_voltage_gain(0.0f, current_gain);
 
     // Clearning counters before main loop 
     clear_counters();
+
+    
     
     while (1) {
+        time_idle_start = get_cycles();
+        
         // ================================================================
         // BUTTON PAUSE 
         // ================================================================
@@ -231,7 +245,7 @@ int main(void) {
         if(sample_count == PERF_TEST_SAMPLES && !perf_done){
             print_counters();
             perf_done = true;
-            display_string("Oscilloscope continues running...\n");
+            print("Oscilloscope continues running...\n");
         }
     }
     return 0;

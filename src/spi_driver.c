@@ -91,7 +91,7 @@ bool spi_wait_for_ready(void) {
         }
         timeout--;
     }
-    display_string("SPI DRDY timeout!\n");
+    print("SPI DRDY timeout!\n");
     return false;
 }
 
