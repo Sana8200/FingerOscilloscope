@@ -98,7 +98,7 @@ int main(void) {
 
             if (is_paused) {
                 vga_show_paused();
-                set_leds(0x3FF); // All LEDs on
+                set_leds(0x3FF); 
             } else {
                 vga_hide_paused();
                 set_leds(0x002);
