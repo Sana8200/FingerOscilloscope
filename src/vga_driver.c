@@ -55,7 +55,6 @@ void vga_draw_filled_rect(int x, int y, int w, int h, uint8_t color) {
     if (y + h > SCREEN_HEIGHT) { h = SCREEN_HEIGHT - y; }  
     for (int row = 0; row < h; row++) {
         volatile uint8_t *line = &pVGA_PIXEL_BUFFER[(y + row) * SCREEN_WIDTH + x];
-        // filling that row (it doesn't calculate y coordinates each time)
         for (int col = 0; col < w; col++) {
             line[col] = color;
         }
@@ -136,7 +135,6 @@ int vga_voltage_to_y(float voltage, float v_min, float v_max) {
     
     return y;
 }
-
 
 
 void vga_get_graph_area(int *left, int *right, int *top, int *bottom) {

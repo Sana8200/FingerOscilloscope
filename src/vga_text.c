@@ -121,13 +121,7 @@ void vga_draw_char(int x, int y, char c, uint8_t color) {
     }
 }
 
-<<<<<<< HEAD
-/**
- * Draws each character and then move 6 pixels right (5 for character and 1 for spacing)
- */
-=======
 
->>>>>>> Advanced_Project/Performance_Analysis
 void vga_draw_string(int x, int y, const char *str, uint8_t color) {
     while (*str) {
         vga_draw_char(x, y, *str, color);
@@ -144,11 +138,9 @@ void vga_draw_int(int x, int y, int value, uint8_t color) {
     
     if (value < 0) { neg = 1; value = -value; }
     
-    // handling 0
     if (value == 0) {
         buf[i++] = '0';
     } else {
-        // extracting digit (backwards)
         while (value > 0) {
             buf[i++] = '0' + (value % 10);  
             value /= 10;    
@@ -204,3 +196,16 @@ void vga_draw_float(int x, int y, float value, uint8_t color) {
     x += 6;
     vga_draw_char(x, y, '0' + (frac % 10), color); 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+

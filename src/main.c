@@ -7,13 +7,14 @@
 #include "timer.h"
 #include "dtekv-lib.h"
 #include "delay.h"
+#include "performance_counter.h"
 
 
 #define V_MIN           0.0f    
 #define V_MAX           3.3f   
 #define ERASE_WIDTH     3       
 
-#define DEFAULT_SAMPLE_RATE   50     
+#define DEFAULT_SAMPLE_RATE   150     
 #define MIN_SAMPLE_RATE  50
 #define MAX_SAMPLE_RATE 500
 
@@ -93,7 +94,6 @@ int main(void) {
         // BUTTON PAUSE, SW0 FREEZE , GAIN SWITCHES (SW2, SW3, SW4), SAMPLE_RATE CHANGE SWITCHES (SW8, SW9)
         // =================================================================================================
         if (get_btn()) {
-            // Wait until button is RELEASED
             while (get_btn()) {
                 delay_ms(10);
             }
@@ -165,11 +165,7 @@ int main(void) {
         }
         prev_switches = current_switches;
 
-
-        // ================================================================
-        // WAIT FOR TIMER AND READ ADC
-        // ================================================================ 
-        while (!timer_check_tick()) {}
+      
         
         // ================================================================
         // WAIT FOR TIMER AND READ ADC
@@ -207,7 +203,6 @@ int main(void) {
         if (pos_x > graph_left) {
             vga_draw_line(prev_x, prev_y, pos_x, current_y, COLOR_ORANGE, false);
         } else {
-            // if we are at the very start(left edge), just drawing a dot
             vga_draw_pixel(pos_x, current_y, COLOR_ORANGE);
         }
         prev_x = pos_x;
