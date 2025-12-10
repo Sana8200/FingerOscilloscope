@@ -92,9 +92,9 @@ src/
 ├── timer.c/.h                   # Timer for consistent sampling
 ├── hardware.c/.h                # Switches, LEDs, 7-segment
 ├── delay.c/.h                   # Delay functions
-├── performance_counter.S        # Performance counter assembly (NEW)
-├── performance_counter.h        # Performance counter header (NEW)
-├── performance_counter_prints.c # Print counters function (NEW)
+├── performance_counter.S        # Performance counter assembly 
+├── performance_counter.h        # Performance counter header 
+├── performance_counter_prints.c # Print counters function 
 ├── boot.S                       # Startup code
 ├── dtekv-lib.c/.h               # DTEK-V library
 ├── dtekv-script.lds             # Linker script
@@ -142,16 +142,6 @@ This project includes a performance analysis component using DTEK-V hardware per
 | `performance_counter.h` | Header file with counter declarations |
 | `performance_counter_prints.c` | Function to print counter values and derived metrics |
 
-### Hardware Counters Used
-- `mcycle` - Clock cycles elapsed
-- `minstret` - Instructions retired
-- `mhpmcounter3` - Memory instructions
-- `mhpmcounter4` - I-Cache misses
-- `mhpmcounter5` - D-Cache misses
-- `mhpmcounter6` - I-Cache stall cycles
-- `mhpmcounter7` - D-Cache stall cycles
-- `mhpmcounter8` - Data hazard stalls
-- `mhpmcounter9` - ALU stalls
 
 ### Compile with Different Optimizations
 ```bash
