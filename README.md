@@ -68,7 +68,6 @@ This project implements a functional oscilloscope that:
 
 
 ### Wiring 
-
 ```
 DE10-Lite GPIO    AD7705
 ─────────────────────────
@@ -83,21 +82,23 @@ GND        ───►   GND, REF-
 ```
 
 ## Project Structure
-
 ```
 src/
-|-- main.c                  # Main loop
-|-- ad7705_driver.c/.h      # ADC communication
-|-- spi_driver.c/.h         # SPI bit-banging
-|-- vga_driver.c/.h         # Drawing stuff on screen
-|-- vga_text.c              # Text/font rendering
-|-- timer.c/.h              # Timer for consistent sampling
-|-- hardware.c/.h           # Switches, LEDs, 7-segment
-|-- delay.c/.h              # Delay functions
-|-- boot.S                  # Startup code
-|-- dtekv-lib.c/.h          # Debug printing via JTAG
-|-- dtekv-script.lds        # Linker script
-+-- Makefile
+├── main.c                       # Main loop
+├── ad7705_driver.c/.h           # ADC communication
+├── spi_driver.c/.h              # SPI bit-banging
+├── vga_driver.c/.h              # Drawing stuff on screen
+├── vga_text.c                   # Text/font rendering
+├── timer.c/.h                   # Timer for consistent sampling
+├── hardware.c/.h                # Switches, LEDs, 7-segment
+├── delay.c/.h                   # Delay functions
+├── performance_counter.S        # Performance counter assembly (NEW)
+├── performance_counter.h        # Performance counter header (NEW)
+├── performance_counter_prints.c # Print counters function (NEW)
+├── boot.S                       # Startup code
+├── dtekv-lib.c/.h               # DTEK-V library
+├── dtekv-script.lds             # Linker script
+└── Makefile                     # Build file (modified for -O0/-O3)
 ```
 
 ## How to Build and Run
@@ -130,6 +131,48 @@ dtekv-run main.bin
 make clean
 ```
 
+## Advanced Project - Performance Analysis
+
+This project includes a performance analysis component using DTEK-V hardware performance counters.
+
+### New Files for Performance Analysis
+| File | Description |
+|------|-------------|
+| `performance_counter.S` | Assembly code to access 9 hardware performance counters via CSRs |
+| `performance_counter.h` | Header file with counter declarations |
+| `performance_counter_prints.c` | Function to print counter values and derived metrics |
+
+### Hardware Counters Used
+- `mcycle` - Clock cycles elapsed
+- `minstret` - Instructions retired
+- `mhpmcounter3` - Memory instructions
+- `mhpmcounter4` - I-Cache misses
+- `mhpmcounter5` - D-Cache misses
+- `mhpmcounter6` - I-Cache stall cycles
+- `mhpmcounter7` - D-Cache stall cycles
+- `mhpmcounter8` - Data hazard stalls
+- `mhpmcounter9` - ALU stalls
+
+### Compile with Different Optimizations
+```bash
+# No optimization
+make build-O0
+
+# Heavy optimization
+make build-O3
+```
+
+This creates `main-O0.bin` or `main-O3.bin`
+
+### Run Performance Test
+```bash
+dtekv-run main-O0.bin   # or main-O3.bin
+```
+
+Wait for 500 samples (~3-4 seconds), and counter values will be printed to the terminal.
+
+You can change the number of samples by editing `PERF_TEST_SAMPLES` in `main.c`.
+
 ## Some Technical Notes
 
 ### SPI
@@ -138,8 +181,7 @@ Since DTEK-V doesn't have hardware SPI, we had to bit-bang it ourselves. It runs
 ### VGA
 The frame buffer sits at `0x08000000`. We use Bresenham's algorithm for drawing lines and a column-erase approach so the display doesn't flicker when updating.
 
-### Calibration
-There's a calibration factor (around 1.535) in the ADC driver to account for the voltage divider and component tolerances. If your readings are off, you might need to tweak this value in `ad7705_driver.c`.
+
 
 
 ### Memory Map
@@ -155,13 +197,11 @@ There's a calibration factor (around 1.535) in the ADC driver to account for the
 | 0x08000000 | VGA Frame Buffer |
 
 ## Calibration
-
+There's a calibration factor (around 1.535) in the ADC driver to account for the voltage divider and component tolerances. If your readings are off, you might need to tweak this value in `ad7705_driver.c`.
 The voltage reading includes a calibration factor (1.535×) to compensate for:
 - Input voltage divider effects
 - ADC reference voltage tolerance
 - Component variations
-
-To recalibrate, apply known voltages and adjust the factor in `ad7705_driver.c`.
 
 ## Course Information
 
