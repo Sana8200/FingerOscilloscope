@@ -5,10 +5,33 @@ OBJECTS ?= $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 LINKER ?= $(SRC_DIR)/dtekv-script.lds
 
 TOOLCHAIN ?= riscv32-unknown-elf-
-CFLAGS ?= -Wall -nostdlib -O3 -mabi=ilp32 -march=rv32imzicsr -fno-builtin
+BASE_FLAGS ?= -Wall -nostdlib -mabi=ilp32 -march=rv32imzicsr -fno-builtin
+
+OPT ?= -O3
+
+CFLAGS = $(BASE_FLAGS) $(OPT)
 
 
 build: clean main.bin
+
+build-O0:
+	$(MAKE) build OPT=-O0
+	mv main.bin main-O0.bin
+	mv main.elf main-O0.elf
+
+
+run-O0: build-O0
+	$(MAKE) run FILE_TO_RUN=$(CURDIR)/main-O0.bin
+
+
+build-O3:
+	$(MAKE) build OPT=-O3
+	mv main.bin main-O3.bin
+	mv main.elf main-O3.elf
+
+
+run-O3: build-O3
+	$(MAKE) run FILE_TO_RUN=$(CURDIR)/main-O3.bin
 
 
 main.elf: 

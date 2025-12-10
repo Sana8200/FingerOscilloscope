@@ -16,7 +16,7 @@
 #define ADC_RST_PIN       (1 << 5)   // GPIO_[5] - Reset (active low)
 
 
-// GPIO Register Pointers which points to the data in the address 
+
 #define pGPIO_DATA          ((volatile uint32_t *) (GPIO_BASE + 0))
 #define pGPIO_DIRECTION     ((volatile uint32_t *) (GPIO_BASE + 4))
 

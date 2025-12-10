@@ -3,8 +3,6 @@
 
 /**
  * FONT DATA - 5x7 pixel characters 
- * Each character is 5 bytes (columns), each byte has 7 bits (rows)
- * Bit 0 = top row, Bit 6 = bottom row  
  */ 
 static const uint8_t font5x7[96][5] = {    
     {0x00, 0x00, 0x00, 0x00, 0x00}, // 32: Space    
@@ -123,26 +121,27 @@ void vga_draw_char(int x, int y, char c, uint8_t color) {
     }
 }
 
+<<<<<<< HEAD
 /**
  * Draws each character and then move 6 pixels right (5 for character and 1 for spacing)
  */
+=======
+
+>>>>>>> Advanced_Project/Performance_Analysis
 void vga_draw_string(int x, int y, const char *str, uint8_t color) {
     while (*str) {
         vga_draw_char(x, y, *str, color);
-        x += 6;  // 5 pixel width + 1 pixel gap
+        x += 6;  
         str++;
     }
 }
 
-/**
- * converting deciman numbers integers to binary 
- */
+
 void vga_draw_int(int x, int y, int value, uint8_t color) {
-    char buf[12]; // the digits comes out backwards which we store them in this buffer
+    char buf[12]; 
     int i = 0;
-    int neg = 0;  // keeping track of minus numbers
+    int neg = 0;  
     
-    // making the negaive number positive but setting neg = 1
     if (value < 0) { neg = 1; value = -value; }
     
     // handling 0
@@ -151,15 +150,12 @@ void vga_draw_int(int x, int y, int value, uint8_t color) {
     } else {
         // extracting digit (backwards)
         while (value > 0) {
-            buf[i++] = '0' + (value % 10);  // value%10 gets the last digit and converts that to character ASCII 
-            value /= 10;    // chops the last digit
+            buf[i++] = '0' + (value % 10);  
+            value /= 10;    
         }
     }
-    
-    // Adding that minus sign
     if (neg) {buf[i++] = '-';}
     
-    // Draw in reverse order, looping backwards through our buffer to print the number in the correct order
     while (i > 0) {
         vga_draw_char(x, y, buf[--i], color);
         x += 6;
@@ -167,23 +163,23 @@ void vga_draw_int(int x, int y, int value, uint8_t color) {
 }
 
 
-// Draw float with 2 decimal places (e.g., "1.65")
+
+
 void vga_draw_float(int x, int y, float value, uint8_t color) {
-    if (value != value){ return; }  // NaN(not a number) check for 0/0
-    if (value > 99.99f) { value = 99.99f; }  // boundry check 
+    if (value != value){ return; }  
+    if (value > 99.99f) { value = 99.99f; }  
     if (value < -9.99f) { value = -9.99f; }
     if (value < 0) {
         vga_draw_char(x, y, '-', color);
         x += 6;
         value = -value;
     }
+
+    int whole = (int)value;   
+    int frac = (int)((value - whole) * 100 + 0.5f);  
     
-    int whole = (int)value;   // seperating whole (e.g whole = 1)
-    int frac = (int)((value - whole) * 100 + 0.5f);  // seperating fractins, Rounding(+0.5f) to 2 decimals (e.g. frac = 65)
+    if (frac >= 100) { frac = 0; whole++; }   
     
-    if (frac >= 100) { frac = 0; whole++; }   // Handle rounding overflow (e.g. 1.999 converting to 2.00)
-    
-    // Draw whole part This is same logic as drawing integers 
     if (whole == 0) {
         vga_draw_char(x, y, '0', color);
         x += 6;
@@ -201,23 +197,10 @@ void vga_draw_float(int x, int y, float value, uint8_t color) {
         }
     }
     
-    // Draw decimal point dot
     vga_draw_char(x, y, '.', color); 
     x += 6;
        
-    // Draw fraction (always 2 digits)
-    vga_draw_char(x, y, '0' + (frac / 10), color);  // extracting tenth digit of fraction
+    vga_draw_char(x, y, '0' + (frac / 10), color);  
     x += 6;
-    vga_draw_char(x, y, '0' + (frac % 10), color); // extracting ones digit of fraction 
+    vga_draw_char(x, y, '0' + (frac % 10), color); 
 }
-
-
-
-
-
-
-
-
-
-
-

@@ -5,7 +5,6 @@
 #include <stdint.h> 
 #include <stdbool.h> 
 
-// DE10-Lite Memory-Mapped Base Addresses
 #define PUSH_BUTTON_BASE_ADDR        0x040000D0
 #define LED_BASE_ADDR                0x04000000
 #define SEV_SEG_DISPLAY_BASE_ADDR    0x04000050
@@ -17,8 +16,6 @@
 
 #define DEBOUNCE_DELAY_MS  50
 
-
-// Switch bit masks
 #define SW0_FREEZE      0x001   // SW0: Freeze screen
 #define SW1             0x002   // SW1: 
 #define SW2_GAIN2       0x004   // SW2: Gain = 2
