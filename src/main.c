@@ -14,7 +14,7 @@
 #define V_MAX           3.3f   
 #define ERASE_WIDTH     3       
 
-#define DEFAULT_SAMPLE_RATE   150     
+#define DEFAULT_SAMPLE_RATE   50     
 #define MIN_SAMPLE_RATE  50
 #define MAX_SAMPLE_RATE 500
 
@@ -171,6 +171,9 @@ int main(void) {
         // WAIT FOR TIMER AND READ ADC
         // ================================================================ 
         while (!timer_check_tick()) {
+
+            // Just checking a register over and over
+            // This generates billions of fast instructions
 
         }
         

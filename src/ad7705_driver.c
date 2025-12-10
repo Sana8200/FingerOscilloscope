@@ -151,7 +151,7 @@ static int wait_for_ready(int timeout, uint8_t channel) {
         if (check_drdy(channel)) {
             return ADC_OK;
         }
-        timeout--;
+        timeout--;   // Keep waiting... 
     }
     print("ADC TIMEOUT!\n");
     return ADC_TIMEOUT;
