@@ -27,7 +27,7 @@ void ad7705_init(uint8_t channel) {
     current_gain_setting = GAIN_1;               
     
     delay_ms(10);  
-    print("Waiting for ad7705 for self-calibration...");
+    print("Waiting for ad7705 for self-calibration...\n");
     if (wait_for_ready(500000, channel) != ADC_OK) {
         print("ADC init FAILED - timeout!\n");
         set_leds(0x3FF);

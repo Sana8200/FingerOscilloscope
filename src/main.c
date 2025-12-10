@@ -46,41 +46,30 @@ static bool is_paused = false;
 static bool is_frozen = false;
 static int prev_switches = 0;   
 
-static inline uint32_t get_cycles(void) {
-    uint32_t cycles;
-    asm volatile ("csrr %0, mcycle" : "=r" (cycles));
-    return cycles;
-}
-
-uint32_t time_idle_start, time_work_start, time_work_end;
-uint32_t total_active_cycles = 0;
-uint32_t total_idle_cycles = 0;
-
 
 int main(void) {
-    print("\n");
-    print("============================================= DE10-Lite Oscilloscope =============================================\n");
-    print("Controls:");
-    print("  Button  : Pause/Resume");
-    print("  SW0     : Freeze (examine waveform)");
-    print("  SW2     : Gain = 2");
-    print("  SW3     : Gain = 4");
-    print("  SW4     : Gain = 8");
-    print("  SW8     : Sample Rate -50");
-    print("  SW9     : Sample Rate +50\n\n");
+    print("\n============================================= DE10-Lite Oscilloscope =============================================\n");
+    print("Controls:\n");
+    print("  Button  : Pause/Resume\n");
+    print("  SW0     : Freeze (examine waveform)\n");
+    print("  SW2     : Gain = 2\n");
+    print("  SW3     : Gain = 4\n");
+    print("  SW4     : Gain = 8\n");
+    print("  SW8     : Sample Rate -50\n");
+    print("  SW9     : Sample Rate +50\n\n");  
 
-    print("Init Timer...");
+    print("Init Timer...\n");
     timer_init(current_sample_rate);
     
-    print("Init SPI...");
+    print("Init SPI...\n");
     spi_init();
     delay_ms(50);
     
-    print("Init ADC...");
+    print("Init ADC...\n");
     ad7705_init(CHN_AIN1);
     delay_ms(100);
     
-    print("Init VGA...");
+    print("Init VGA...\n");
     vga_init_scope(current_gain, current_sample_rate);
     vga_get_graph_area(&graph_left, &graph_right, &graph_top, &graph_bottom);
     
@@ -97,15 +86,13 @@ int main(void) {
 
     // Clearning counters before main loop 
     clear_counters();
-
-    
+    print("Performance Test Number Of Samples:  "); print_dec(PERF_TEST_SAMPLES); 
+    print("\n");
     
     while (1) {
-        time_idle_start = get_cycles();
-        
-        // ================================================================
-        // BUTTON PAUSE 
-        // ================================================================
+        // =================================================================================================
+        // BUTTON PAUSE, SW0 FREEZE , GAIN SWITCHES (SW2, SW3, SW4), SAMPLE_RATE CHANGE SWITCHES (SW8, SW9)
+        // =================================================================================================
         if (get_btn()) {
             while (get_btn()) {
                 delay_ms(10);
@@ -126,9 +113,6 @@ int main(void) {
             continue;     
         }
 
-        // ================================================================
-        // SW0 FREEZE (examine waveform without overlay)
-        // ================================================================
         int current_switches = get_sw();
         bool sw0_on = (current_switches & SW0_FREEZE) != 0;
         
@@ -146,9 +130,6 @@ int main(void) {
             continue;  
         }
 
-        // ================================================================
-        // GAIN SWITCHES (SW2, SW3, SW4)
-        // ================================================================
         int new_gain = read_gain_from_switches(current_switches);
         if (new_gain != current_gain) {
             current_gain = new_gain;
@@ -166,9 +147,6 @@ int main(void) {
             }
         }
 
-        // ================================================================
-        // SAMPLE_RATE CHANGE SWITCHES (SW8, SW9)
-        // ================================================================
         if (switch_pressed(current_switches, prev_switches, 0x200)) {
             if (current_sample_rate < MAX_SAMPLE_RATE) {
                 current_sample_rate += 50;
@@ -192,7 +170,9 @@ int main(void) {
         // ================================================================
         // WAIT FOR TIMER AND READ ADC
         // ================================================================ 
-        while (!timer_check_tick()) {}
+        while (!timer_check_tick()) {
+
+        }
         
         float voltage = ad7705_read_voltage(CHN_AIN1);   
 
