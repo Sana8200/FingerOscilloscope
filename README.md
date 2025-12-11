@@ -20,7 +20,7 @@ This project implements a functional oscilloscope that:
 
 ### Hardware Setup
 <p align="center">
-  <img src="https://github.com/Sana8200/FingerOscilloscope/blob/images/hardware_setup.jpg" width="500">
+  <img src="https://github.com/Sana8200/FingerOscilloscope/blob/images/hardware_setup.jpg" width="400">
 </p>
 *DE10-Lite board connected to AD7705 ADC module with BNC connectors and potentiometer for testing*
 
@@ -163,7 +163,7 @@ Since DTEK-V doesn't have hardware SPI, we had to bit-bang it ourselves. It runs
 ### VGA
 The frame buffer sits at `0x08000000`. We use Bresenham's algorithm for drawing lines and a column-erase approach so the display doesn't flicker when updating.
 
-## Calibration
+### Calibration
 There's a calibration factor (around 1.535) in the ADC driver to account for the voltage divider and component tolerances. If your readings are off, you might need to tweak this value in `ad7705_driver.c`.
 The voltage reading includes a calibration factor (1.535×) to compensate for:
 - Input voltage divider effects
