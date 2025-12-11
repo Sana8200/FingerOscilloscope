@@ -135,14 +135,6 @@ make clean
 
 This project includes a performance analysis component using DTEK-V hardware performance counters.
 
-### New Files for Performance Analysis
-| File | Description |
-|------|-------------|
-| `performance_counter.S` | Assembly code to access 9 hardware performance counters via CSRs |
-| `performance_counter.h` | Header file with counter declarations |
-| `performance_counter_prints.c` | Function to print counter values and derived metrics |
-
-
 ### Compile with Different Optimizations
 ```bash
 # No optimization
@@ -170,21 +162,6 @@ Since DTEK-V doesn't have hardware SPI, we had to bit-bang it ourselves. It runs
 
 ### VGA
 The frame buffer sits at `0x08000000`. We use Bresenham's algorithm for drawing lines and a column-erase approach so the display doesn't flicker when updating.
-
-
-
-
-### Memory Map
-| Address | Peripheral |
-|---------|------------|
-| 0x04000000 | LEDs |
-| 0x04000010 | Switches |
-| 0x04000020 | Timer |
-| 0x04000040 | JTAG UART |
-| 0x04000050 | 7-Segment Display |
-| 0x040000D0 | Push Buttons |
-| 0x040000E0 | GPIO |
-| 0x08000000 | VGA Frame Buffer |
 
 ## Calibration
 There's a calibration factor (around 1.535) in the ADC driver to account for the voltage divider and component tolerances. If your readings are off, you might need to tweak this value in `ad7705_driver.c`.
